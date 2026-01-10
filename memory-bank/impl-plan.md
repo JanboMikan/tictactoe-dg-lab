@@ -1,0 +1,114 @@
+# DG-LAB Tic-Tac-Toe 实施计划 (Implementation Plan)
+
+本计划旨在指导开发 "DG-LAB 郊狼井字棋" 项目。请按照以下阶段顺序执行。
+
+## Phase 1: 项目初始化与基础架构 (Initialization)
+目标：搭建前后端基础框架，确保配置加载和 HTTP 服务正常运行。
+
+- [ ] **后端项目结构搭建**
+    - [ ] 初始化 Go Module (`go mod init`).
+    - [ ] 创建目录结构: `cmd`, `internal/config`, `internal/server`, `internal/game`, `internal/dglab`.
+- [ ] **配置文件模块 (`internal/config`)**
+    - [ ] 创建 `config.yml` 模板 (包含 server, game, waveforms 配置项).
+    - [ ] 使用 `viper` 实现配置加载与解析.
+    - [ ] 定义 Go Struct 映射配置文件的结构.
+- [ ] **基础 HTTP 服务 (`internal/server`)**
+    - [ ] 使用 `Gin` 或 `net/http` 启动 Web Server.
+    - [ ] 配置 CORS 中间件 (允许前端跨域调试).
+    - [ ] 编写一个 `/ping` 路由测试服务存活.
+- [ ] **前端项目初始化**
+    - [ ] 使用 Vite 创建 React + TypeScript 项目.
+    - [ ] 安装依赖: `@mui/material`, `@emotion/react`, `@emotion/styled`, `react-router-dom`.
+    - [ ] 清理默认模板，确保 `npm run dev` 正常运行.
+
+## Phase 2: DG-LAB Socket 服务核心 (IoT Core)
+目标：实现与郊狼 APP 的通信协议，确保能独立控制设备。
+
+- [ ] **WebSocket 基础 (`internal/dglab`)**
+    - [ ] 定义 `Client` 结构体 (存储 WS 连接).
+    - [ ] 实现 `/ws/dglab` 路由处理函数.
+    - [ ] 实现 `Hub` 管理所有 APP 连接.
+- [ ] **握手与绑定协议**
+    - [ ] 实现 `bind` 消息处理: 解析 `clientId` (Web端ID) 和 `targetId` (APP端ID).
+    - [ ] 建立 `clientId` -> `Client` 的映射关系.
+    - [ ] 实现心跳机制 (`heartbeat`) 保持连接.
+- [ ] **指令发送模块**
+    - [ ] 实现 `strength` 指令封装 (通道+模式+数值).
+    - [ ] 实现 `pulse` 波形下发逻辑 (分段发送 HEX 数据).
+    - [ ] 实现 `clear` 清空队列指令.
+    - [ ] **单元测试**: 编写一个 Go Test，模拟 APP 连接并验证服务器是否返回了正确的握手响应.
+
+## Phase 3: 游戏核心逻辑 (Game Engine)
+目标：实现井字棋逻辑和房间管理，暂不涉及硬件控制。
+
+- [ ] **房间管理 (`internal/game`)**
+    - [ ] 定义 `Room` 和 `Player` 结构体.
+    - [ ] 实现 `RoomManager`: 创建房间、加入房间、查找房间.
+- [ ] **游戏 WebSocket 协议**
+    - [ ] 实现 `/ws/game` 路由.
+    - [ ] 定义消息类型: `join_room`, `move`, `game_over`, `room_state`.
+- [ ] **游戏算法**
+    - [ ] 实现 `MakeMove(pos int)`: 更新棋盘.
+    - [ ] 实现 `CheckWin()`: 判定胜负或平局.
+    - [ ] 实现广播机制: 每次状态变化向房间内所有玩家推送 `room_state`.
+
+## Phase 4: 前端核心功能开发 (Frontend Core)
+目标：完成游戏界面和交互，实现与后端的纯软件通信。
+
+- [ ] **UI 框架搭建 (MUI)**
+    - [ ] 创建 `Layout` 组件.
+    - [ ] 创建 `HomePage`: 输入昵称、创建/加入房间.
+    - [ ] 创建 `GameRoom`: 基础布局 (AppBar, PlayerInfo, Board).
+- [ ] **游戏逻辑对接**
+    - [ ] 封装 WebSocket Hook (处理连接、断线重连).
+    - [ ] 实现 `Board` 组件: 渲染 3x3 格子，点击发送 `move` 指令.
+    - [ ] 状态同步: 根据后端推送的 `room_state` 更新界面.
+- [ ] **二维码生成**
+    - [ ] 引入 `qrcode.react`.
+    - [ ] 生成 UUID (`dglab_client_id`).
+    - [ ] 渲染连接二维码: `https://...#DGLAB-SOCKET#wss://.../<uuid>`.
+
+## Phase 5: 系统集成与硬件联动 (Integration)
+目标：将游戏事件与 DG-LAB 服务打通，实现自动震动。
+
+- [ ] **ID 关联**
+    - [ ] 前端: 连接 Game WS 后，立即发送 `update_dglab_id` 消息，上传生成的 UUID.
+    - [ ] 后端: 在 `Player` 结构中存储 `DGLabClientID`.
+- [ ] **触发器实现 (`internal/game` -> `internal/dglab`)**
+    - [ ] **落子震动**: 在 `MakeMove` 成功后，调用 `dglab.SendPulse(player.ID, config.MoveStrength)`.
+    - [ ] **平局震动**: 在 `CheckWin` 返回 Draw 时，向双方发送震动.
+    - [ ] **输赢震动**: 游戏结束时，向 Loser 发送 `config.LossDuration` 时长的震动.
+- [ ] **状态反馈 UI**
+    - [ ] 后端: 当 APP 连接/断开时，通过 Game WS 通知前端更新 `device_active` 状态.
+    - [ ] 前端: 在玩家头像旁显示连接状态图标 (绿/灰).
+    - [ ] 前端: 引入 `react-hot-toast`，收到 `shock_event` 时弹出提示 ("Bzzzt!").
+
+## Phase 6: 高级功能与配置 (Refinement)
+目标：实现用户自定义设置和赢家惩罚机制。
+
+- [ ] **用户配置 (Settings)**
+    - [ ] 前端: 创建 `SettingsDialog`.
+        - [ ] 双滑块: `Safe Min` - `Safe Max`.
+        - [ ] 单滑块: `Move Strength`, `Draw Strength`.
+    - [ ] 后端: 处理 `update_config` 消息，保存到 Player Session.
+    - [ ] **核心逻辑**: 修改震动发送函数，将逻辑强度映射到用户的 `Safe Range`.
+- [ ] **惩罚机制 (Punishment)**
+    - [ ] 后端: 实现 `punish` 接口 (校验发起者是否为 Winner).
+    - [ ] 后端: 计算惩罚强度 (基于 Loser 的 Safe Range 和 Winner 的百分比).
+    - [ ] 前端: 仅在胜利且游戏结束状态下显示 `PunishPanel`.
+        - [ ] 强度滑块 (1-100%).
+        - [ ] 时间滑块 (读取 Config 中的 Min/Max).
+
+## Phase 7: 测试与部署 (Testing & Deployment)
+目标：确保系统稳定，边界条件处理得当。
+
+- [ ] **边界测试**
+    - [ ] 测试 A 连接设备，B 未连接设备时的游戏流程 (不应报错).
+    - [ ] 测试断网重连机制.
+    - [ ] 测试输入非法的配置数值 (如 Min > Max).
+- [ ] **波形调试**
+    - [ ] 在 `config.yml` 中调整 HEX 波形，找到最适合 "轻微震动" 和 "强力惩罚" 的手感.
+- [ ] **构建**
+    - [ ] 编写 `Dockerfile` (多阶段构建: Build React -> Build Go).
+    - [ ] 编写 `docker-compose.yml` (包含 Server 和 Config 挂载).
+
