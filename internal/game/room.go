@@ -101,20 +101,29 @@ func (r *Room) Broadcast(msg *Message) {
 		return
 	}
 
-	if r.PlayerX != nil && r.PlayerX.Conn != nil {
-		select {
-		case r.PlayerX.Send <- data:
-		default:
-			log.Printf("[Room %s] Failed to send to PlayerX %s (channel full)", r.ID, r.PlayerX.Name)
+	// 使用 defer recover 防止向已关闭的 channel 发送消息导致 panic
+	sendToPlayer := func(player *Player, role string) {
+		defer func() {
+			if panicErr := recover(); panicErr != nil {
+				log.Printf("[Room %s] Recovered from panic when sending to %s %s: %v", r.ID, role, player.Name, panicErr)
+			}
+		}()
+
+		if player != nil && player.Conn != nil && player.Send != nil {
+			select {
+			case player.Send <- data:
+			default:
+				log.Printf("[Room %s] Failed to send to %s %s (channel full)", r.ID, role, player.Name)
+			}
 		}
 	}
 
-	if r.PlayerO != nil && r.PlayerO.Conn != nil {
-		select {
-		case r.PlayerO.Send <- data:
-		default:
-			log.Printf("[Room %s] Failed to send to PlayerO %s (channel full)", r.ID, r.PlayerO.Name)
-		}
+	if r.PlayerX != nil {
+		sendToPlayer(r.PlayerX, "PlayerX")
+	}
+
+	if r.PlayerO != nil {
+		sendToPlayer(r.PlayerO, "PlayerO")
 	}
 }
 

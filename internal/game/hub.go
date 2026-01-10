@@ -69,6 +69,9 @@ func (h *Hub) handleUnregister(player *Player) {
 	if player.Room != nil {
 		log.Printf("[Hub] Player %s disconnected from room %s", player.Name, player.Room.ID)
 
+		// 先从房间中移除玩家（这样广播时就不会向已断开的玩家发送消息）
+		player.Room.RemovePlayer(player)
+
 		// 通知房间内其他玩家
 		player.Room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)
 
