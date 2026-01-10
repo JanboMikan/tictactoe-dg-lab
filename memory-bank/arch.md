@@ -221,7 +221,7 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
 └── web/               # React 前端产物
 ```
 
-### 7.1.1 当前实现的目录结构（Phase 1 完成）
+### 7.1.1 当前实现的目录结构（Phase 2 完成）
 ```text
 /
 ├── config.yml                  # 配置文件（server, game, waveforms）
@@ -234,10 +234,16 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
 │   ├── config/
 │   │   ├── config.go          # 配置加载模块（使用 viper）
 │   │   └── config_test.go     # 配置模块单元测试
-│   ├── dglab/                 # DG-LAB Socket 服务（待实现）
+│   ├── dglab/                 # DG-LAB Socket 服务模块 ✅
+│   │   ├── types.go           # 消息类型、Client、Binding 结构定义
+│   │   ├── hub.go             # Hub: 管理所有连接、绑定关系、心跳
+│   │   ├── client.go          # Client: ReadPump/WritePump 处理 WS 读写
+│   │   ├── handler.go         # WebSocket HTTP 升级处理器
+│   │   ├── commands.go        # 指令封装: SendStrength, SendPulse, ClearQueue
+│   │   └── dglab_test.go      # 单元测试（覆盖注册、绑定、指令发送）
 │   ├── game/                  # 游戏逻辑模块（待实现）
 │   └── server/
-│       ├── server.go          # HTTP 服务器（Gin 框架，CORS 中间件，/ping 路由）
+│       ├── server.go          # HTTP 服务器（Gin，CORS，/ping，/ws/dglab 路由）
 │       └── server_test.go     # 服务器模块单元测试
 └── web/                       # React 前端项目
     ├── src/
@@ -250,22 +256,92 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
     └── tsconfig.json          # TypeScript 配置
 ```
 
-**已实现的功能：**
+**已实现的功能（Phase 1-2）：**
 - ✅ Go 后端基础架构：配置加载、HTTP 服务、CORS 支持
 - ✅ 配置文件系统：支持 YAML 格式配置，包含服务器、游戏、波形参数
-- ✅ 单元测试：config 和 server 模块均有测试覆盖
+- ✅ 单元测试：config、server 和 dglab 模块均有测试覆盖
 - ✅ React 前端基础：Vite + TypeScript + MUI 框架搭建完成
 - ✅ 健康检查：`/ping` 端点用于服务存活性检测
+- ✅ **DG-LAB WebSocket 服务完整实现**：
+  - **Hub 管理**: 客户端注册/注销、绑定关系维护、心跳保活
+  - **WebSocket 路由**: `/ws/dglab` 端点，支持 APP 连接
+  - **握手协议**: 自动分配 UUID、发送初始绑定消息
+  - **绑定逻辑**: 处理 APP 的 bind 请求，建立控制端-APP 映射
+  - **指令系统**:
+    - `SendStrength`: 强度控制（增/减/设置，通道A/B）
+    - `SendPulse`: 波形数据下发（支持HEX数组）
+    - `ClearQueue`: 清空波形队列
+  - **错误处理**: 完整的错误码系统（200/400/401/402/404/405）
+  - **并发安全**: 使用 sync.RWMutex 保护共享数据
+  - **单元测试覆盖**: 8个测试用例，覆盖注册、绑定、指令发送、参数验证
 
 **待实现的模块：**
-- ⏳ `internal/dglab/` - DG-LAB WebSocket 服务
 - ⏳ `internal/game/` - 井字棋游戏逻辑和房间管理
 - ⏳ 前端游戏界面和 WebSocket 通信
 
-### 7.2 DG-LAB 服务模块 (`internal/dglab`)
-*   必须实现 `dg-lab.md` 中的 `bind`, `msg`, `heartbeat` 处理。
-*   提供一个 `SendCommand(dglabClientId string, strength int, duration int, waveformKey string)` 方法供 `game` 模块调用。
-*   **注意**: 这里的 Socket 服务不需要 Nginx 代理，直接由 Go 处理。但在生产环境若有 HTTPS，需确保 WS 升级为 WSS。
+### 7.2 DG-LAB 服务模块 (`internal/dglab`) ✅ 已实现
+
+**模块职责**：
+- 实现完整的 DG-LAB WebSocket 通信协议（参考 `dg-lab.md`）
+- 管理控制端（Web）和 APP 端的连接与绑定
+- 提供高级 API 供游戏模块调用
+
+**核心组件**：
+
+1. **types.go** - 类型定义
+   - `Message`: 通信消息结构（type, clientId, targetId, message）
+   - `MessageType`: 消息类型常量（bind, msg, heartbeat, break, error）
+   - `Client`: WebSocket 客户端封装
+   - `Binding`: 绑定关系结构
+
+2. **hub.go** - 连接管理中心
+   - `Hub`: 核心管理器，维护所有连接和绑定关系
+   - `Run()`: 主事件循环（处理注册/注销/心跳）
+   - `RegisterClient()`: 注册新客户端并分配 UUID
+   - `HandleBind()`: 处理绑定请求（注意字段语义，详见文档）
+   - `SendCommand()`: 向绑定的 APP 发送指令
+   - **并发安全**: 使用 `sync.RWMutex` 保护共享数据
+
+3. **client.go** - 客户端读写循环
+   - `ReadPump()`: 从 WebSocket 读取消息并分发处理
+   - `WritePump()`: 向 WebSocket 写入消息（带 Ping/Pong）
+   - 自动处理消息验证、转发、错误响应
+
+4. **handler.go** - HTTP 升级处理
+   - `HandleWebSocket()`: 返回 Gin 路由处理器
+   - 升级 HTTP 连接为 WebSocket
+   - 启动客户端读写协程
+
+5. **commands.go** - 指令封装层
+   - `SendStrength(clientID, channel, mode, value)`: 强度控制
+   - `SendPulse(clientID, channel, hexData)`: 波形下发
+   - `ClearQueue(clientID, channel)`: 清空队列
+   - 快捷方法: `SendStrengthQuick`, `SendStrengthSet`, `SendStrengthZero`
+   - 参数验证和格式化
+
+**与游戏模块的集成方式**：
+```go
+// 获取 Hub 实例
+hub := server.GetDGLabHub()
+
+// 发送震动指令
+hub.SendStrength(playerDGLabID, dglab.ChannelA, dglab.ModeSet, 50)
+hub.SendPulse(playerDGLabID, "A", []string{"0A0A0A0A00000000", "..."})
+hub.ClearQueue(playerDGLabID, dglab.ChannelB)
+```
+
+**测试覆盖**（dglab_test.go）：
+- ✅ Hub 创建和客户端注册
+- ✅ 绑定流程（控制端-APP 配对）
+- ✅ 指令发送和消息转发
+- ✅ 强度/波形/清空指令格式验证
+- ✅ 参数边界检查（无效通道、超范围值）
+
+**注意事项**：
+- WebSocket 升级直接由 Go 处理，无需 Nginx 代理
+- 生产环境使用 WSS（需配置 TLS）
+- 心跳间隔 60 秒，Ping/Pong 保活机制
+- 消息最大长度 1950 字节（协议限制）
 
 ### 7.3 游戏循环模块 (`internal/game`)
 *   **Hub**: 管理所有房间。

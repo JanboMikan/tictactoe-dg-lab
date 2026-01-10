@@ -21,22 +21,22 @@
     - [x] 安装依赖: `@mui/material`, `@emotion/react`, `@emotion/styled`, `react-router-dom`.
     - [x] 清理默认模板，确保 `yarn dev` 正常运行.
 
-## Phase 2: DG-LAB Socket 服务核心 (IoT Core)
+## Phase 2: DG-LAB Socket 服务核心 (IoT Core) ✅
 目标：实现与郊狼 APP 的通信协议，确保能独立控制设备。
 
-- [ ] **WebSocket 基础 (`internal/dglab`)**
-    - [ ] 定义 `Client` 结构体 (存储 WS 连接).
-    - [ ] 实现 `/ws/dglab` 路由处理函数.
-    - [ ] 实现 `Hub` 管理所有 APP 连接.
-- [ ] **握手与绑定协议**
-    - [ ] 实现 `bind` 消息处理: 解析 `clientId` (Web端ID) 和 `targetId` (APP端ID).
-    - [ ] 建立 `clientId` -> `Client` 的映射关系.
-    - [ ] 实现心跳机制 (`heartbeat`) 保持连接.
-- [ ] **指令发送模块**
-    - [ ] 实现 `strength` 指令封装 (通道+模式+数值).
-    - [ ] 实现 `pulse` 波形下发逻辑 (分段发送 HEX 数据).
-    - [ ] 实现 `clear` 清空队列指令.
-    - [ ] **单元测试**: 编写一个 Go Test，模拟 APP 连接并验证服务器是否返回了正确的握手响应.
+- [x] **WebSocket 基础 (`internal/dglab`)**
+    - [x] 定义 `Client` 结构体 (存储 WS 连接).
+    - [x] 实现 `/ws/dglab` 路由处理函数.
+    - [x] 实现 `Hub` 管理所有 APP 连接.
+- [x] **握手与绑定协议**
+    - [x] 实现 `bind` 消息处理: 解析 `clientId` (Web端ID) 和 `targetId` (APP端ID).
+    - [x] 建立 `clientId` -> `Client` 的映射关系.
+    - [x] 实现心跳机制 (`heartbeat`) 保持连接.
+- [x] **指令发送模块**
+    - [x] 实现 `strength` 指令封装 (通道+模式+数值).
+    - [x] 实现 `pulse` 波形下发逻辑 (分段发送 HEX 数据).
+    - [x] 实现 `clear` 清空队列指令.
+    - [x] **单元测试**: 编写一个 Go Test，模拟 APP 连接并验证服务器是否返回了正确的握手响应.
 
 ## Phase 3: 游戏核心逻辑 (Game Engine)
 目标：实现井字棋逻辑和房间管理，暂不涉及硬件控制。
