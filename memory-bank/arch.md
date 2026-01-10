@@ -319,7 +319,18 @@ web/src/
 ```
 
 **待实现的模块：**
-- ⏳ 游戏与 DG-LAB 硬件联动 (Phase 5)
+- ✅ 游戏与 DG-LAB 硬件联动 (Phase 5) **已完成**
+- ⏳ 高级功能与配置 (Phase 6)
+- ⏳ 测试与部署 (Phase 7)
+
+**Phase 5 完成内容（硬件联动）：**
+- ✅ Game Hub 注入 DGLab Hub 和 Config 依赖
+- ✅ 落子震动触发：玩家每次落子后自动触发震动
+- ✅ 平局震动触发：游戏平局时双方玩家同时接收震动
+- ✅ 惩罚震动：赢家可向输家发送自定义强度和时长的震动
+- ✅ 设备连接状态同步：实时检查 DG-LAB 设备是否在线并更新前端状态
+- ✅ 前端 Toast 通知：震动事件实时显示在前端界面
+- ✅ 设备状态图标：玩家设备连接状态（绿/灰）显示在玩家信息区域
 
 ### 7.2 DG-LAB 服务模块 (`internal/dglab`) ✅ 已实现
 
@@ -517,6 +528,52 @@ dglabHub.SendPulse(loserDGLabID, "A", waveformData)
 - 房间 ID 使用 UUID 前6位，足够随机且易于输入
 - 玩家断开连接时自动广播状态更新
 - 空房间定期清理，避免内存泄漏
+
+### 7.4 硬件联动实现 (`internal/game/hub.go`) ✅ Phase 5 完成
+
+**集成逻辑**：
+Game Hub 在创建时注入 DGLab Hub 和 Config 依赖，在游戏事件发生时触发相应的震动。
+
+**震动触发场景**：
+
+1. **落子震动** (`triggerMoveShock`)
+   - 触发时机：玩家成功落子后
+   - 强度来源：玩家配置的 `MoveStrength` (0-100)
+   - 持续时间：Config 中的 `MoveDuration`
+   - 通道：A 通道
+   - 实现：通过 `SendStrengthSet` 设置强度到设备范围 (0-200)
+
+2. **平局震动** (`triggerDrawShock`)
+   - 触发时机：游戏结束且为平局
+   - 触发对象：双方玩家
+   - 强度来源：玩家配置的 `DrawStrength` (0-100)
+   - 持续时间：Config 中的 `DrawDuration`
+   - 通道：A 通道
+
+3. **惩罚震动** (`triggerPunishmentShock`)
+   - 触发时机：赢家主动发送惩罚
+   - 触发对象：输家
+   - 强度计算：`safe_min + (safe_max - safe_min) * percent / 100`
+   - 持续时间：赢家指定 (Config 限制范围内)
+   - 通道：A 通道
+
+**设备状态同步**：
+- `dglab.Hub.IsDeviceConnected(clientID)`: 检查设备是否真正在线
+- `room.BroadcastRoomState(deviceStatusChecker)`: 传入设备检查函数
+- 实时更新 `PlayerInfo.DeviceActive` 状态
+
+**震动事件通知**：
+- 每次触发震动时，通过 `room.Broadcast` 发送 `shock_event` 消息
+- 消息包含：`target` (目标玩家), `intensity` (强度), `reason` (原因)
+- 前端接收后通过 Toast 显示通知
+
+**强度映射规则**：
+```go
+// 用户强度 (0-100) -> 设备强度 (0-200)
+func mapStrengthToDevice(userStrength int) int {
+    return userStrength * 2
+}
+```
 
 ---
 

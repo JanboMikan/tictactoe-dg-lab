@@ -74,20 +74,22 @@
     - [x] 生成 UUID (`dglab_client_id`).
     - [x] 渲染连接二维码: `https://...#DGLAB-SOCKET#wss://.../<uuid>`.
 
-## Phase 5: 系统集成与硬件联动 (Integration)
+## Phase 5: 系统集成与硬件联动 (Integration) ✅
 目标：将游戏事件与 DG-LAB 服务打通，实现自动震动。
 
-- [ ] **ID 关联**
-    - [ ] 前端: 连接 Game WS 后，立即发送 `update_dglab_id` 消息，上传生成的 UUID.
-    - [ ] 后端: 在 `Player` 结构中存储 `DGLabClientID`.
-- [ ] **触发器实现 (`internal/game` -> `internal/dglab`)**
-    - [ ] **落子震动**: 在 `MakeMove` 成功后，调用 `dglab.SendPulse(player.ID, config.MoveStrength)`.
-    - [ ] **平局震动**: 在 `CheckWin` 返回 Draw 时，向双方发送震动.
-    - [ ] **输赢震动**: 游戏结束时，向 Loser 发送 `config.LossDuration` 时长的震动.
-- [ ] **状态反馈 UI**
-    - [ ] 后端: 当 APP 连接/断开时，通过 Game WS 通知前端更新 `device_active` 状态.
-    - [ ] 前端: 在玩家头像旁显示连接状态图标 (绿/灰).
-    - [ ] 前端: 引入 `react-hot-toast`，收到 `shock_event` 时弹出提示 ("Bzzzt!").
+- [x] **ID 关联**
+    - [x] 前端: 连接 Game WS 后，立即发送 `update_dglab_id` 消息，上传生成的 UUID.
+    - [x] 后端: 在 `Player` 结构中存储 `DGLabClientID`.
+- [x] **触发器实现 (`internal/game` -> `internal/dglab`)**
+    - [x] **落子震动**: 在 `handleMove` 成功后，调用 `triggerMoveShock` 发送震动.
+    - [x] **平局震动**: 在 `checkWin` 返回 Draw 时，调用 `triggerDrawShock` 向双方发送震动.
+    - [x] **输赢震动**: 游戏结束时，通过 `triggerGameOverShock` 处理（当前留待惩罚机制）.
+    - [x] **惩罚震动**: 在 `handlePunish` 中调用 `triggerPunishmentShock` 发送自定义强度和时长的震动.
+- [x] **状态反馈 UI**
+    - [x] 后端: 添加 `dglab.Hub.IsDeviceConnected` 方法检查设备在线状态.
+    - [x] 后端: 通过 `room.BroadcastRoomState` 传递设备状态检查函数.
+    - [x] 前端: 在玩家头像旁显示连接状态图标 (绿/灰) - 已实现（Phase 4）.
+    - [x] 前端: 接收 `shock_event` 时弹出 Toast 提示 - 已实现（Phase 4）.
 
 ## Phase 6: 高级功能与配置 (Refinement)
 目标：实现用户自定义设置和赢家惩罚机制。

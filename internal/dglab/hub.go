@@ -312,3 +312,25 @@ func (h *Hub) isBound(id string) bool {
 	}
 	return false
 }
+
+// IsDeviceConnected 检查指定的客户端ID是否有绑定的设备且设备在线
+// clientID: 控制端ID (即玩家的 DGLabClientID)
+// 返回 true 表示设备已连接并在线
+func (h *Hub) IsDeviceConnected(clientID string) bool {
+	if clientID == "" {
+		return false
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	// 检查是否有绑定关系
+	targetID, exists := h.bindings[clientID]
+	if !exists {
+		return false
+	}
+
+	// 检查APP端是否在线
+	_, online := h.clients[targetID]
+	return online
+}

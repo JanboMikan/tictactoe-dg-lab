@@ -3,6 +3,9 @@ package game
 import (
 	"log"
 	"time"
+
+	"github.com/anon/tictactoe-dg-lab/internal/config"
+	"github.com/anon/tictactoe-dg-lab/internal/dglab"
 )
 
 // Hub 游戏连接管理中心
@@ -11,6 +14,8 @@ type Hub struct {
 	handleMessage chan *PlayerMessage
 	register      chan *Player
 	unregister    chan *Player
+	dglabHub      *dglab.Hub     // DG-LAB WebSocket Hub
+	config        *config.Config // 配置
 }
 
 // PlayerMessage 玩家消息（内部使用）
@@ -20,12 +25,14 @@ type PlayerMessage struct {
 }
 
 // NewHub 创建游戏 Hub
-func NewHub() *Hub {
+func NewHub(dglabHub *dglab.Hub, cfg *config.Config) *Hub {
 	return &Hub{
 		roomManager:   NewRoomManager(),
 		handleMessage: make(chan *PlayerMessage, 256),
 		register:      make(chan *Player, 256),
 		unregister:    make(chan *Player, 256),
+		dglabHub:      dglabHub,
+		config:        cfg,
 	}
 }
 
@@ -63,7 +70,7 @@ func (h *Hub) handleUnregister(player *Player) {
 		log.Printf("[Hub] Player %s disconnected from room %s", player.Name, player.Room.ID)
 
 		// 通知房间内其他玩家
-		player.Room.BroadcastRoomState()
+		player.Room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)
 
 		// 如果房间为空，删除房间
 		if player.Room.IsEmpty() {
@@ -151,7 +158,7 @@ func (h *Hub) handleJoinRoom(player *Player, msg *Message) {
 	log.Printf("[Hub] Player %s joined room %s as Symbol %d", player.Name, room.ID, player.Symbol)
 
 	// 广播房间状态
-	room.BroadcastRoomState()
+	room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)
 }
 
 // handleUpdateDGLabID 处理更新 DG-LAB ID 请求
@@ -160,7 +167,7 @@ func (h *Hub) handleUpdateDGLabID(player *Player, msg *Message) {
 
 	// 广播房间状态（更新设备连接状态）
 	if player.Room != nil {
-		player.Room.BroadcastRoomState()
+		player.Room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)
 	}
 }
 
@@ -200,12 +207,16 @@ func (h *Hub) handleMove(player *Player, msg *Message) {
 
 	log.Printf("[Hub] Player %s moved to position %d in room %s", player.Name, msg.Position, room.ID)
 
-	// 广播房间状态
-	room.BroadcastRoomState()
+	// 触发落子震动（移动前触发，避免游戏结束后被覆盖）
+	h.triggerMoveShock(player)
 
-	// 如果游戏结束，广播游戏结束消息
+	// 广播房间状态
+	room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)
+
+	// 如果游戏结束，处理游戏结束逻辑
 	if room.GameOver {
 		room.BroadcastGameOver()
+		h.triggerGameOverShock(room)
 	}
 }
 
@@ -236,12 +247,149 @@ func (h *Hub) handlePunish(player *Player, msg *Message) {
 		return
 	}
 
-	// 注意：实际的惩罚逻辑（发送震动）将在 Phase 5 实现
-	// 这里只是记录日志
-	log.Printf("[Hub] Player %s requested punishment: %d%%, %.1fs", player.Name, msg.Percent, msg.Duration)
+	// 验证持续时间
+	if msg.Duration < h.config.Game.PunishmentDurationMin || msg.Duration > h.config.Game.PunishmentDurationMax {
+		player.SendError("Duration out of range")
+		return
+	}
+
+	// 触发惩罚震动
+	loser := room.GetOpponent(player)
+	if loser != nil {
+		h.triggerPunishmentShock(loser, msg.Percent, msg.Duration)
+	}
+
+	log.Printf("[Hub] Player %s sent punishment to opponent: %d%%, %.1fs", player.Name, msg.Percent, msg.Duration)
 }
 
 // GetRoomManager 获取房间管理器（用于测试）
 func (h *Hub) GetRoomManager() *RoomManager {
 	return h.roomManager
+}
+
+// triggerMoveShock 触发落子震动
+func (h *Hub) triggerMoveShock(player *Player) {
+	if player.GetDGLabID() == "" {
+		log.Printf("[Hub] Player %s has no DG-LAB device connected, skipping move shock", player.Name)
+		return
+	}
+
+	// 获取玩家配置的强度 (0-100)，需要映射到设备强度 (0-200)
+	strength := mapStrengthToDevice(player.Config.MoveStrength)
+
+	// 发送强度设置指令
+	err := h.dglabHub.SendStrengthSet(player.GetDGLabID(), dglab.ChannelA, strength)
+	if err != nil {
+		log.Printf("[Hub] Failed to send move shock to player %s: %v", player.Name, err)
+		return
+	}
+
+	log.Printf("[Hub] Sent move shock to player %s: strength=%d (device=%d)", player.Name, player.Config.MoveStrength, strength)
+
+	// 广播震动事件通知
+	if player.Room != nil {
+		player.Room.Broadcast(&Message{
+			Type:      TypeShockEvent,
+			Target:    player.Name,
+			Intensity: player.Config.MoveStrength,
+			Reason:    "move",
+		})
+	}
+}
+
+// triggerGameOverShock 触发游戏结束震动
+func (h *Hub) triggerGameOverShock(room *Room) {
+	if room.Winner == 0 {
+		// 平局，向双方发送平局震动
+		h.triggerDrawShock(room)
+	} else {
+		// 有赢家，向输家发送失败震动（暂不实现，留待惩罚机制）
+		// 这里可以添加一个默认的"输了"震动
+		loser := room.GetPlayerBySymbol(3 - room.Winner) // 1->2, 2->1
+		if loser != nil && loser.GetDGLabID() != "" {
+			// 可以选择发送一个默认的失败震动
+			log.Printf("[Hub] Player %s lost the game", loser.Name)
+		}
+	}
+}
+
+// triggerDrawShock 触发平局震动
+func (h *Hub) triggerDrawShock(room *Room) {
+	players := []*Player{room.PlayerX, room.PlayerO}
+
+	for _, player := range players {
+		if player == nil || player.GetDGLabID() == "" {
+			continue
+		}
+
+		// 获取玩家配置的平局强度
+		strength := mapStrengthToDevice(player.Config.DrawStrength)
+
+		// 发送强度设置指令
+		err := h.dglabHub.SendStrengthSet(player.GetDGLabID(), dglab.ChannelA, strength)
+		if err != nil {
+			log.Printf("[Hub] Failed to send draw shock to player %s: %v", player.Name, err)
+			continue
+		}
+
+		log.Printf("[Hub] Sent draw shock to player %s: strength=%d (device=%d)", player.Name, player.Config.DrawStrength, strength)
+
+		// 广播震动事件通知
+		room.Broadcast(&Message{
+			Type:      TypeShockEvent,
+			Target:    player.Name,
+			Intensity: player.Config.DrawStrength,
+			Reason:    "draw",
+		})
+	}
+}
+
+// triggerPunishmentShock 触发惩罚震动
+func (h *Hub) triggerPunishmentShock(loser *Player, percent int, duration float64) {
+	if loser.GetDGLabID() == "" {
+		log.Printf("[Hub] Player %s has no DG-LAB device connected, skipping punishment", loser.Name)
+		return
+	}
+
+	// 计算惩罚强度：基于输家的安全范围
+	// actual_strength = safe_min + (safe_max - safe_min) * percent / 100
+	strengthRange := loser.Config.SafeMax - loser.Config.SafeMin
+	actualStrength := loser.Config.SafeMin + (strengthRange * percent / 100)
+
+	// 映射到设备强度 (0-200)
+	deviceStrength := mapStrengthToDevice(actualStrength)
+
+	// 发送强度设置指令
+	err := h.dglabHub.SendStrengthSet(loser.GetDGLabID(), dglab.ChannelA, deviceStrength)
+	if err != nil {
+		log.Printf("[Hub] Failed to send punishment shock to player %s: %v", loser.Name, err)
+		return
+	}
+
+	log.Printf("[Hub] Sent punishment shock to player %s: percent=%d%%, duration=%.1fs, strength=%d (device=%d)",
+		loser.Name, percent, duration, actualStrength, deviceStrength)
+
+	// 广播震动事件通知
+	if loser.Room != nil {
+		loser.Room.Broadcast(&Message{
+			Type:      TypeShockEvent,
+			Target:    loser.Name,
+			Intensity: actualStrength,
+			Reason:    "punish",
+		})
+	}
+
+	// TODO: 根据 duration 参数控制震动持续时间
+	// 当前只发送强度，如果需要波形控制，可以使用 SendPulse 方法
+}
+
+// mapStrengthToDevice 将用户强度 (0-100) 映射到设备强度 (0-200)
+func mapStrengthToDevice(userStrength int) int {
+	if userStrength < 0 {
+		userStrength = 0
+	}
+	if userStrength > 100 {
+		userStrength = 100
+	}
+	return userStrength * 2
 }

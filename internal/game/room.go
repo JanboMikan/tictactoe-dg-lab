@@ -119,22 +119,31 @@ func (r *Room) Broadcast(msg *Message) {
 }
 
 // BroadcastRoomState 广播当前房间状态
-func (r *Room) BroadcastRoomState() {
+// deviceStatusChecker: 可选的设备状态检查函数，用于确定 DeviceActive 状态
+func (r *Room) BroadcastRoomState(deviceStatusChecker func(string) bool) {
 	r.mu.RLock()
 
 	players := make(map[string]*PlayerInfo)
 
 	if r.PlayerX != nil {
+		deviceActive := r.PlayerX.DGLabClientID != ""
+		if deviceActive && deviceStatusChecker != nil {
+			deviceActive = deviceStatusChecker(r.PlayerX.DGLabClientID)
+		}
 		players[r.PlayerX.Name] = &PlayerInfo{
 			Connected:    r.PlayerX.Conn != nil,
-			DeviceActive: r.PlayerX.DGLabClientID != "",
+			DeviceActive: deviceActive,
 		}
 	}
 
 	if r.PlayerO != nil {
+		deviceActive := r.PlayerO.DGLabClientID != ""
+		if deviceActive && deviceStatusChecker != nil {
+			deviceActive = deviceStatusChecker(r.PlayerO.DGLabClientID)
+		}
 		players[r.PlayerO.Name] = &PlayerInfo{
 			Connected:    r.PlayerO.Conn != nil,
-			DeviceActive: r.PlayerO.DGLabClientID != "",
+			DeviceActive: deviceActive,
 		}
 	}
 

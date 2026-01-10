@@ -44,8 +44,8 @@ func New(cfg *config.Config) *Server {
 	go dglabHub.Run()
 	log.Println("[Server] DG-LAB Hub started")
 
-	// 创建Game Hub并启动
-	gameHub := game.NewHub()
+	// 创建Game Hub并启动（注入 DGLab Hub 和 Config）
+	gameHub := game.NewHub(dglabHub, cfg)
 	go gameHub.Run()
 	log.Println("[Server] Game Hub started")
 
