@@ -76,53 +76,76 @@ export const useGameWebSocket = ({
 
     ws.onmessage = (event) => {
       try {
-        const message: GameMessage = JSON.parse(event.data);
-        console.log('Received message:', message);
+        // Backend may send multiple JSON messages separated by newlines in one WebSocket message
+        // Split by newline and process each message separately
+        const lines = event.data.toString().split('\n').filter((line: string) => line.trim());
 
-        switch (message.type) {
-          case 'room_state':
-            setRoomState({
-              board: message.board,
-              turn: message.turn,
-              players: message.players,
-            });
-            onRoomStateRef.current?.(message);
-            break;
+        for (const line of lines) {
+          try {
+            const message: GameMessage = JSON.parse(line);
+            console.log('Received message:', message);
 
-          case 'game_over':
-            if (onGameOverRef.current) {
-              onGameOverRef.current(message);
+            switch (message.type) {
+              case 'room_state':
+                // Convert backend integer board format to frontend format
+                // Backend: 0=empty, 1=X, 2=O
+                // Frontend: null=empty, 'X'=X, 'O'=O
+                const convertedBoard = (message.board as any[]).map((cell: number) => {
+                  if (cell === 0) return null;
+                  if (cell === 1) return 'X';
+                  if (cell === 2) return 'O';
+                  return null;
+                });
+
+                setRoomState({
+                  board: convertedBoard,
+                  turn: message.turn,
+                  players: message.players,
+                });
+                onRoomStateRef.current?.({
+                  ...message,
+                  board: convertedBoard,
+                });
+                break;
+
+              case 'game_over':
+                if (onGameOverRef.current) {
+                  onGameOverRef.current(message);
+                }
+                if (message.winner) {
+                  toast.success(`${message.winner} wins!`);
+                } else {
+                  toast('Game ended in a draw', { icon: '🤝' });
+                }
+                break;
+
+              case 'shock_event':
+                if (onShockEventRef.current) {
+                  onShockEventRef.current(message);
+                }
+                const emoji =
+                  message.reason === 'punish' ? '⚡' : message.reason === 'move' ? '📍' : '💥';
+                toast(`${emoji} ${message.target} received ${message.intensity} intensity shock`, {
+                  duration: 2000,
+                });
+                break;
+
+              case 'error':
+                const errorMsg = (message as ErrorMessage).error;
+                console.error('Game error:', errorMsg);
+                toast.error(errorMsg);
+                onErrorRef.current?.(errorMsg);
+                break;
+
+              default:
+                console.log('Unknown message type:', message);
             }
-            if (message.winner) {
-              toast.success(`${message.winner} wins!`);
-            } else {
-              toast('Game ended in a draw', { icon: '🤝' });
-            }
-            break;
-
-          case 'shock_event':
-            if (onShockEventRef.current) {
-              onShockEventRef.current(message);
-            }
-            const emoji =
-              message.reason === 'punish' ? '⚡' : message.reason === 'move' ? '📍' : '💥';
-            toast(`${emoji} ${message.target} received ${message.intensity} intensity shock`, {
-              duration: 2000,
-            });
-            break;
-
-          case 'error':
-            const errorMsg = (message as ErrorMessage).error;
-            console.error('Game error:', errorMsg);
-            toast.error(errorMsg);
-            onErrorRef.current?.(errorMsg);
-            break;
-
-          default:
-            console.log('Unknown message type:', message);
+          } catch (error) {
+            console.error('Failed to parse message:', error, 'Line:', line);
+          }
         }
       } catch (error) {
-        console.error('Failed to parse message:', error);
+        console.error('Failed to process WebSocket message:', error);
       }
     };
 
