@@ -29,6 +29,10 @@ type Hub struct {
 
 	// 保护并发访问的互斥锁
 	mu sync.RWMutex
+
+	// 绑定成功回调函数：当设备绑定成功时调用
+	// 参数是控制端的clientID
+	OnBindSuccess func(clientID string)
 }
 
 // NewHub 创建一个新的Hub实例
@@ -191,6 +195,14 @@ func (h *Hub) HandleBind(senderID string, msg Message) error {
 	if client, ok := h.clients[clientID]; ok {
 		client.Send <- data
 	}
+
+	// 调用绑定成功回调（在锁外调用，避免死锁）
+	// 先解锁，然后调用回调
+	h.mu.Unlock()
+	if h.OnBindSuccess != nil {
+		h.OnBindSuccess(clientID)
+	}
+	h.mu.Lock() // 重新加锁以保持defer的正确性
 
 	return nil
 }

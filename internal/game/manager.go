@@ -148,3 +148,31 @@ func generateRoomID() string {
 	id := uuid.New().String()
 	return id[:6]
 }
+
+// FindRoomByDGLabID 根据DGLabClientID查找房间
+// 返回包含使用该DGLabID的玩家的房间
+func (m *RoomManager) FindRoomByDGLabID(dglabClientID string) *Room {
+	if dglabClientID == "" {
+		return nil
+	}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, room := range m.rooms {
+		room.mu.RLock()
+		// 检查PlayerX
+		if room.PlayerX != nil && room.PlayerX.GetDGLabID() == dglabClientID {
+			room.mu.RUnlock()
+			return room
+		}
+		// 检查PlayerO
+		if room.PlayerO != nil && room.PlayerO.GetDGLabID() == dglabClientID {
+			room.mu.RUnlock()
+			return room
+		}
+		room.mu.RUnlock()
+	}
+
+	return nil
+}

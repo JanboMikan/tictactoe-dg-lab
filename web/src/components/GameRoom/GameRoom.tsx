@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { Settings as SettingsIcon, Bluetooth as BluetoothIcon } from '@mui/icons-material';
 import { v4 as uuidv4 } from 'uuid';
+import toast from 'react-hot-toast';
 import { useGameWebSocket } from '../../hooks/useGameWebSocket';
 import { Board } from '../Board/Board';
 import { QRCodeDialog } from '../QRCodeDialog/QRCodeDialog';
@@ -32,6 +33,8 @@ export const GameRoom = () => {
 
   // Track if we've already joined the room
   const hasJoinedRoom = useRef(false);
+  // Track previous device connection status to detect changes
+  const previousDeviceActive = useRef<boolean>(false);
 
   // WebSocket configuration
   const wsUrl = useMemo(() => {
@@ -90,6 +93,28 @@ export const GameRoom = () => {
       hasJoinedRoom.current = false;
     }
   }, [isConnected]);
+
+  // Monitor device connection status and auto-close QR dialog when connected
+  useEffect(() => {
+    if (!nickname) return;
+
+    const displayRoomState = roomState || localRoomState;
+    const currentPlayer = displayRoomState?.players?.[nickname];
+    const isDeviceActive = currentPlayer?.device_active || false;
+
+    // Detect device connection: from false -> true
+    if (!previousDeviceActive.current && isDeviceActive && qrDialogOpen) {
+      // Device just connected, close QR dialog and show success toast
+      setQrDialogOpen(false);
+      toast.success('DG-LAB device connected successfully! 🎮', {
+        duration: 3000,
+        icon: '✅',
+      });
+    }
+
+    // Update previous state
+    previousDeviceActive.current = isDeviceActive;
+  }, [roomState, localRoomState, nickname, qrDialogOpen]);
 
   const handleCellClick = (position: number) => {
     if (!gameOverData && roomState?.turn === nickname) {

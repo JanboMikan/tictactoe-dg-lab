@@ -399,3 +399,20 @@ func mapStrengthToDevice(userStrength int) int {
 	}
 	return userStrength * 2
 }
+
+// NotifyDeviceConnected 通知设备已连接
+// 当DG-LAB设备成功绑定时调用，触发房间状态广播
+func (h *Hub) NotifyDeviceConnected(clientID string) {
+	log.Printf("[Hub] Device connected notification for clientID: %s", clientID)
+
+	// 查找使用这个clientID的房间
+	room := h.roomManager.FindRoomByDGLabID(clientID)
+	if room == nil {
+		log.Printf("[Hub] No room found for clientID: %s", clientID)
+		return
+	}
+
+	log.Printf("[Hub] Found room %s for device %s, broadcasting state update", room.ID, clientID)
+	// 广播房间状态更新
+	room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)
+}

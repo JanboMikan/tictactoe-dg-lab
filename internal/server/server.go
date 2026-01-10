@@ -49,6 +49,13 @@ func New(cfg *config.Config) *Server {
 	go gameHub.Run()
 	log.Println("[Server] Game Hub started")
 
+	// 设置DG-LAB设备绑定成功的回调
+	// 当设备绑定成功时，通知游戏Hub广播状态更新
+	dglabHub.OnBindSuccess = func(clientID string) {
+		log.Printf("[Server] Device bind success callback for clientID: %s", clientID)
+		gameHub.NotifyDeviceConnected(clientID)
+	}
+
 	server := &Server{
 		router:   router,
 		config:   cfg,
