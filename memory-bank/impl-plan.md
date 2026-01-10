@@ -2,24 +2,24 @@
 
 本计划旨在指导开发 "DG-LAB 郊狼井字棋" 项目。请按照以下阶段顺序执行。
 
-## Phase 1: 项目初始化与基础架构 (Initialization)
+## Phase 1: 项目初始化与基础架构 (Initialization) ✅
 目标：搭建前后端基础框架，确保配置加载和 HTTP 服务正常运行。
 
-- [ ] **后端项目结构搭建**
-    - [ ] 初始化 Go Module (`go mod init`).
-    - [ ] 创建目录结构: `cmd`, `internal/config`, `internal/server`, `internal/game`, `internal/dglab`.
-- [ ] **配置文件模块 (`internal/config`)**
-    - [ ] 创建 `config.yml` 模板 (包含 server, game, waveforms 配置项).
-    - [ ] 使用 `viper` 实现配置加载与解析.
-    - [ ] 定义 Go Struct 映射配置文件的结构.
-- [ ] **基础 HTTP 服务 (`internal/server`)**
-    - [ ] 使用 `Gin` 或 `net/http` 启动 Web Server.
-    - [ ] 配置 CORS 中间件 (允许前端跨域调试).
-    - [ ] 编写一个 `/ping` 路由测试服务存活.
-- [ ] **前端项目初始化**
-    - [ ] 使用 Vite 创建 React + TypeScript 项目.
-    - [ ] 安装依赖: `@mui/material`, `@emotion/react`, `@emotion/styled`, `react-router-dom`.
-    - [ ] 清理默认模板，确保 `npm run dev` 正常运行.
+- [x] **后端项目结构搭建**
+    - [x] 初始化 Go Module (`go mod init`).
+    - [x] 创建目录结构: `cmd`, `internal/config`, `internal/server`, `internal/game`, `internal/dglab`.
+- [x] **配置文件模块 (`internal/config`)**
+    - [x] 创建 `config.yml` 模板 (包含 server, game, waveforms 配置项).
+    - [x] 使用 `viper` 实现配置加载与解析.
+    - [x] 定义 Go Struct 映射配置文件的结构.
+- [x] **基础 HTTP 服务 (`internal/server`)**
+    - [x] 使用 `Gin` 启动 Web Server.
+    - [x] 配置 CORS 中间件 (允许前端跨域调试).
+    - [x] 编写一个 `/ping` 路由测试服务存活.
+- [x] **前端项目初始化**
+    - [x] 使用 Vite 创建 React + TypeScript 项目.
+    - [x] 安装依赖: `@mui/material`, `@emotion/react`, `@emotion/styled`, `react-router-dom`.
+    - [x] 清理默认模板，确保 `yarn dev` 正常运行.
 
 ## Phase 2: DG-LAB Socket 服务核心 (IoT Core)
 目标：实现与郊狼 APP 的通信协议，确保能独立控制设备。

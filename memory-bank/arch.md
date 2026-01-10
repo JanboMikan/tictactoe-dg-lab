@@ -11,7 +11,7 @@
 ## 2. 技术栈 (Tech Stack)
 
 ### 2.1 前端 (Frontend)
-*   **Framework**: React + Vite
+*   **Framework**: React + Vite + yarn
 *   **Language**: TypeScript
 *   **UI Library**: Material UI (MUI) v5 - 遵循 Material Design 风格。
 *   **State Management**: React Context 或 Zustand (用于管理 WebSocket 和游戏状态)。
@@ -208,7 +208,7 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
 
 ## 7. 后端实现细节 (Go)
 
-### 7.1 目录结构
+### 7.1 目录结构（规划）
 ```text
 /
 ├── config.yml
@@ -220,6 +220,47 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
 │   └── server/        # HTTP/WS 路由处理
 └── web/               # React 前端产物
 ```
+
+### 7.1.1 当前实现的目录结构（Phase 1 完成）
+```text
+/
+├── config.yml                  # 配置文件（server, game, waveforms）
+├── go.mod                      # Go 模块依赖管理
+├── go.sum                      # 依赖校验和
+├── tictactoe-server           # 编译后的服务器二进制文件
+├── cmd/
+│   └── main.go                # 服务器主入口，加载配置并启动 HTTP 服务
+├── internal/
+│   ├── config/
+│   │   ├── config.go          # 配置加载模块（使用 viper）
+│   │   └── config_test.go     # 配置模块单元测试
+│   ├── dglab/                 # DG-LAB Socket 服务（待实现）
+│   ├── game/                  # 游戏逻辑模块（待实现）
+│   └── server/
+│       ├── server.go          # HTTP 服务器（Gin 框架，CORS 中间件，/ping 路由）
+│       └── server_test.go     # 服务器模块单元测试
+└── web/                       # React 前端项目
+    ├── src/
+    │   ├── App.tsx            # 主应用组件（简化版，使用 MUI）
+    │   ├── main.tsx           # React 入口文件
+    │   └── assets/            # 静态资源
+    ├── public/                # 公共资源
+    ├── package.json           # 前端依赖配置
+    ├── vite.config.ts         # Vite 配置
+    └── tsconfig.json          # TypeScript 配置
+```
+
+**已实现的功能：**
+- ✅ Go 后端基础架构：配置加载、HTTP 服务、CORS 支持
+- ✅ 配置文件系统：支持 YAML 格式配置，包含服务器、游戏、波形参数
+- ✅ 单元测试：config 和 server 模块均有测试覆盖
+- ✅ React 前端基础：Vite + TypeScript + MUI 框架搭建完成
+- ✅ 健康检查：`/ping` 端点用于服务存活性检测
+
+**待实现的模块：**
+- ⏳ `internal/dglab/` - DG-LAB WebSocket 服务
+- ⏳ `internal/game/` - 井字棋游戏逻辑和房间管理
+- ⏳ 前端游戏界面和 WebSocket 通信
 
 ### 7.2 DG-LAB 服务模块 (`internal/dglab`)
 *   必须实现 `dg-lab.md` 中的 `bind`, `msg`, `heartbeat` 处理。
