@@ -8,6 +8,7 @@ import (
 
 	"github.com/anon/tictactoe-dg-lab/internal/config"
 	"github.com/anon/tictactoe-dg-lab/internal/dglab"
+	"github.com/anon/tictactoe-dg-lab/internal/game"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -17,6 +18,7 @@ type Server struct {
 	router    *gin.Engine
 	config    *config.Config
 	dglabHub  *dglab.Hub // DG-LAB WebSocket Hub
+	gameHub   *game.Hub  // Game WebSocket Hub
 }
 
 // New 创建新的服务器实例
@@ -42,10 +44,16 @@ func New(cfg *config.Config) *Server {
 	go dglabHub.Run()
 	log.Println("[Server] DG-LAB Hub started")
 
+	// 创建Game Hub并启动
+	gameHub := game.NewHub()
+	go gameHub.Run()
+	log.Println("[Server] Game Hub started")
+
 	server := &Server{
 		router:   router,
 		config:   cfg,
 		dglabHub: dglabHub,
+		gameHub:  gameHub,
 	}
 
 	// 注册路由
@@ -62,8 +70,8 @@ func (s *Server) registerRoutes() {
 	// DG-LAB WebSocket 路由
 	s.router.GET("/ws/dglab", dglab.HandleWebSocket(s.dglabHub))
 
-	// TODO: 后续添加游戏 WebSocket 路由
-	// s.router.GET("/ws/game", s.gameWSHandler)
+	// Game WebSocket 路由
+	s.router.GET("/ws/game", game.HandleWebSocket(s.gameHub))
 }
 
 // pingHandler 健康检查处理器
@@ -90,4 +98,9 @@ func (s *Server) GetRouter() *gin.Engine {
 // GetDGLabHub 获取DG-LAB Hub（用于游戏逻辑模块调用）
 func (s *Server) GetDGLabHub() *dglab.Hub {
 	return s.dglabHub
+}
+
+// GetGameHub 获取Game Hub（用于测试和其他模块调用）
+func (s *Server) GetGameHub() *game.Hub {
+	return s.gameHub
 }

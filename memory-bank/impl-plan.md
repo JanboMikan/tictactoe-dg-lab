@@ -38,19 +38,25 @@
     - [x] 实现 `clear` 清空队列指令.
     - [x] **单元测试**: 编写一个 Go Test，模拟 APP 连接并验证服务器是否返回了正确的握手响应.
 
-## Phase 3: 游戏核心逻辑 (Game Engine)
+## Phase 3: 游戏核心逻辑 (Game Engine) ✅
 目标：实现井字棋逻辑和房间管理，暂不涉及硬件控制。
 
-- [ ] **房间管理 (`internal/game`)**
-    - [ ] 定义 `Room` 和 `Player` 结构体.
-    - [ ] 实现 `RoomManager`: 创建房间、加入房间、查找房间.
-- [ ] **游戏 WebSocket 协议**
-    - [ ] 实现 `/ws/game` 路由.
-    - [ ] 定义消息类型: `join_room`, `move`, `game_over`, `room_state`.
-- [ ] **游戏算法**
-    - [ ] 实现 `MakeMove(pos int)`: 更新棋盘.
-    - [ ] 实现 `CheckWin()`: 判定胜负或平局.
-    - [ ] 实现广播机制: 每次状态变化向房间内所有玩家推送 `room_state`.
+- [x] **房间管理 (`internal/game`)**
+    - [x] 定义 `Room` 和 `Player` 结构体.
+    - [x] 实现 `RoomManager`: 创建房间、加入房间、查找房间.
+- [x] **游戏 WebSocket 协议**
+    - [x] 实现 `/ws/game` 路由.
+    - [x] 定义消息类型: `join_room`, `move`, `game_over`, `room_state`.
+- [x] **游戏算法**
+    - [x] 实现 `MakeMove(pos int)`: 更新棋盘.
+    - [x] 实现 `CheckWin()`: 判定胜负或平局.
+    - [x] 实现广播机制: 每次状态变化向房间内所有玩家推送 `room_state`.
+- [x] **单元测试**
+    - [x] 测试房间创建和加入
+    - [x] 测试落子逻辑和胜负判定
+    - [x] 测试玩家配置验证
+    - [x] 测试房间管理器功能
+
 
 ## Phase 4: 前端核心功能开发 (Frontend Core)
 目标：完成游戏界面和交互，实现与后端的纯软件通信。

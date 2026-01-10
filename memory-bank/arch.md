@@ -256,10 +256,10 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
     └── tsconfig.json          # TypeScript 配置
 ```
 
-**已实现的功能（Phase 1-2）：**
+**已实现的功能（Phase 1-3）：**
 - ✅ Go 后端基础架构：配置加载、HTTP 服务、CORS 支持
 - ✅ 配置文件系统：支持 YAML 格式配置，包含服务器、游戏、波形参数
-- ✅ 单元测试：config、server 和 dglab 模块均有测试覆盖
+- ✅ 单元测试：config、server、dglab 和 game 模块均有测试覆盖
 - ✅ React 前端基础：Vite + TypeScript + MUI 框架搭建完成
 - ✅ 健康检查：`/ping` 端点用于服务存活性检测
 - ✅ **DG-LAB WebSocket 服务完整实现**：
@@ -274,10 +274,20 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
   - **错误处理**: 完整的错误码系统（200/400/401/402/404/405）
   - **并发安全**: 使用 sync.RWMutex 保护共享数据
   - **单元测试覆盖**: 8个测试用例，覆盖注册、绑定、指令发送、参数验证
+- ✅ **Game WebSocket 服务完整实现** (Phase 3):
+  - **Hub 管理**: 房间管理、玩家连接、消息处理
+  - **WebSocket 路由**: `/ws/game` 端点，支持游戏客户端连接
+  - **房间系统**: 创建房间、加入房间、自动清理空房间
+  - **游戏逻辑**: 完整的井字棋规则、胜负判定、平局判定
+  - **消息协议**: join_room, update_dglab_id, update_config, move, punish
+  - **状态同步**: 实时广播房间状态和游戏结果
+  - **玩家配置**: 支持自定义安全强度范围
+  - **并发安全**: 使用 sync.RWMutex 保护共享数据
+  - **单元测试覆盖**: 7个测试用例，覆盖房间管理、游戏逻辑、配置验证
 
 **待实现的模块：**
-- ⏳ `internal/game/` - 井字棋游戏逻辑和房间管理
-- ⏳ 前端游戏界面和 WebSocket 通信
+- ⏳ 前端游戏界面和 WebSocket 通信 (Phase 4)
+- ⏳ 游戏与 DG-LAB 硬件联动 (Phase 5)
 
 ### 7.2 DG-LAB 服务模块 (`internal/dglab`) ✅ 已实现
 
@@ -343,14 +353,138 @@ hub.ClearQueue(playerDGLabID, dglab.ChannelB)
 - 心跳间隔 60 秒，Ping/Pong 保活机制
 - 消息最大长度 1950 字节（协议限制）
 
-### 7.3 游戏循环模块 (`internal/game`)
-*   **Hub**: 管理所有房间。
-*   **Room**:
-    *   包含 `PlayerA`, `PlayerB`。
-    *   包含 `Board` [9]int。
-    *   处理 `Move` 逻辑。
-    *   **关键**: 当 Move 合法时，调用 `dglab.SendCommand` 给当前玩家发送轻微震动。
-    *   **关键**: 游戏结束判定输赢后，调用 `dglab.SendCommand` 给输家发送强力震动。
+### 7.3 游戏模块 (`internal/game`) ✅ Phase 3 完成
+
+**模块职责**：
+- 实现完整的井字棋游戏逻辑
+- 管理房间和玩家连接
+- 处理游戏 WebSocket 通信协议
+- 提供玩家配置管理功能
+
+**核心组件**：
+
+1. **types.go** - 类型定义
+   - `Message`: 游戏消息结构（type, room_id, player_name, position, config 等）
+   - `MessageType`: 消息类型常量（join_room, update_dglab_id, update_config, move, punish, room_state, game_over, shock_event）
+   - `Player`: 玩家结构（name, conn, dglab_client_id, config, symbol, send channel）
+   - `Room`: 房间结构（id, board, turn, players, game_over, winner）
+   - `PlayerConfig`: 玩家配置（safe_min, safe_max, move_strength, draw_strength）
+   - `PlayerInfo`: 广播用的玩家信息（connected, device_active）
+
+2. **room.go** - 房间游戏逻辑
+   - `MakeMove(player, position)`: 落子逻辑，验证合法性，切换回合
+   - `checkWin()`: 胜负判定，支持8种获胜模式和平局检测
+   - `Broadcast(msg)`: 向房间内所有玩家广播消息
+   - `BroadcastRoomState()`: 广播当前房间状态（棋盘、回合、玩家状态）
+   - `BroadcastGameOver()`: 广播游戏结束消息
+   - `Reset()`: 重置房间（重新开始游戏）
+   - `RemovePlayer(player)`: 移除玩家
+   - 辅助方法：`GetPlayerBySymbol`, `GetPlayerByName`, `GetOpponent`, `IsFull`, `IsEmpty`
+
+3. **manager.go** - 房间管理器
+   - `RoomManager`: 维护所有房间的映射关系
+   - `CreateRoom()`: 创建新房间，自动生成6位房间ID
+   - `GetRoom(roomID)`: 获取指定房间
+   - `JoinRoom(roomID, player)`: 加入房间，自动分配 X/O 符号
+   - `DeleteRoom(roomID)`: 删除房间
+   - `CleanEmptyRooms()`: 定期清理空闲超过10分钟的空房间
+   - **并发安全**: 使用 `sync.RWMutex` 保护房间映射
+
+4. **client.go** - 客户端读写循环
+   - `ReadPump(hub)`: 从 WebSocket 读取消息并发送到 Hub 处理
+   - `WritePump()`: 向 WebSocket 写入消息（带 Ping/Pong 保活）
+   - `SendError(msg)`: 发送错误消息给玩家
+   - `UpdateDGLabID(clientID)`: 更新玩家的 DG-LAB 客户端 ID
+   - `UpdateConfig(config)`: 更新并验证玩家配置
+   - `GetDGLabID()`: 获取玩家的 DG-LAB 客户端 ID
+
+5. **hub.go** - 游戏连接管理中心
+   - `Hub`: 核心管理器，维护房间管理器和玩家连接
+   - `Run()`: 主事件循环（处理注册/注销/消息/定时清理）
+   - `handleRegister(player)`: 处理玩家注册
+   - `handleUnregister(player)`: 处理玩家断开（广播状态、清理空房间）
+   - `processMessage(pm)`: 消息路由和处理
+   - `handleJoinRoom(player, msg)`: 处理加入/创建房间请求
+   - `handleUpdateDGLabID(player, msg)`: 处理 DG-LAB ID 更新
+   - `handleUpdateConfig(player, msg)`: 处理配置更新
+   - `handleMove(player, msg)`: 处理落子，触发状态广播
+   - `handlePunish(player, msg)`: 处理惩罚请求（验证权限）
+
+6. **handler.go** - HTTP 升级处理
+   - `HandleWebSocket(hub)`: 返回 Gin 路由处理器
+   - 升级 HTTP 连接为 WebSocket
+   - 创建玩家实例并启动读写协程
+
+7. **errors.go** - 错误定义
+   - 房间错误：`ErrRoomNotFound`, `ErrRoomFull`, `ErrPlayerNotFound`
+   - 游戏错误：`ErrGameOver`, `ErrNotYourTurn`, `ErrInvalidMove`, `ErrPositionOccupied`
+   - 配置错误：`ErrInvalidConfig`
+   - 权限错误：`ErrNotWinner`
+
+**消息协议**：
+
+客户端 -> 服务器：
+- `join_room`: 创建或加入房间（可选 room_id）
+- `update_dglab_id`: 更新 DG-LAB 客户端 ID
+- `update_config`: 更新玩家配置（safe_min, safe_max, move_strength, draw_strength）
+- `move`: 落子（position: 0-8）
+- `punish`: 发送惩罚（仅赢家可用，需提供 percent 和 duration）
+
+服务器 -> 客户端：
+- `room_state`: 房间状态更新（board, turn, players）
+- `game_over`: 游戏结束（winner, line）
+- `shock_event`: 震动通知（target, intensity, reason）
+- `error`: 错误消息
+
+**游戏流程**：
+
+1. **加入房间**：
+   - 玩家发送 `join_room` 消息（可选房间 ID）
+   - 服务器创建新房间或加入现有房间
+   - 自动分配 X（先手）或 O（后手）符号
+   - 广播房间状态给所有玩家
+
+2. **游戏进行**：
+   - 玩家轮流发送 `move` 消息
+   - 服务器验证合法性（回合、位置）
+   - 更新棋盘并检查胜负
+   - 广播最新房间状态
+
+3. **游戏结束**：
+   - 检测到胜利或平局
+   - 广播 `game_over` 消息
+   - 赢家可发送 `punish` 请求
+
+**与 DG-LAB 模块的集成**（Phase 5 实现）：
+```go
+// 在 game hub 中获取 dglab hub 实例
+dglabHub := server.GetDGLabHub()
+
+// 发送震动（落子）
+playerDGLabID := player.GetDGLabID()
+dglabHub.SendStrength(playerDGLabID, dglab.ChannelA, dglab.ModeSet, player.Config.MoveStrength)
+
+// 发送震动（惩罚）
+loserDGLabID := loser.GetDGLabID()
+strength := calculatePunishmentStrength(loser.Config, percent)
+dglabHub.SendPulse(loserDGLabID, "A", waveformData)
+```
+
+**测试覆盖**（game_test.go）：
+- ✅ 房间创建和基本属性
+- ✅ 玩家加入房间（分配符号、房间满员）
+- ✅ 落子逻辑（合法性、回合切换、位置占用）
+- ✅ 胜负判定（横排、竖排、对角线、平局）
+- ✅ 玩家配置验证（范围检查、一致性）
+- ✅ 房间管理器（创建、获取、删除、唯一性）
+- ✅ 空房间清理（时间阈值）
+
+**注意事项**：
+- 所有共享数据使用 `sync.RWMutex` 保护，避免竞态条件
+- 广播方法在释放锁后再调用 `Broadcast`，避免死锁
+- 房间 ID 使用 UUID 前6位，足够随机且易于输入
+- 玩家断开连接时自动广播状态更新
+- 空房间定期清理，避免内存泄漏
 
 ---
 
