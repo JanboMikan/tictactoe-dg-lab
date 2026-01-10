@@ -68,7 +68,10 @@ func (s *Server) registerRoutes() {
 	s.router.GET("/ping", s.pingHandler)
 
 	// DG-LAB WebSocket 路由
+	// 支持两种路径：/ws/dglab 和 /ws/dglab/:clientId
+	// APP 扫描二维码后会连接到 /ws/dglab/:clientId 路径
 	s.router.GET("/ws/dglab", dglab.HandleWebSocket(s.dglabHub))
+	s.router.GET("/ws/dglab/:clientId", dglab.HandleWebSocket(s.dglabHub))
 
 	// Game WebSocket 路由
 	s.router.GET("/ws/game", game.HandleWebSocket(s.gameHub))

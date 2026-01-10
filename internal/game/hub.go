@@ -165,6 +165,12 @@ func (h *Hub) handleJoinRoom(player *Player, msg *Message) {
 func (h *Hub) handleUpdateDGLabID(player *Player, msg *Message) {
 	player.UpdateDGLabID(msg.DGLabClientID)
 
+	// 在 DG-LAB Hub 中预注册这个虚拟客户端
+	// 这样当 APP 扫码连接并发送 bind 请求时，Hub 能够找到这个 clientID
+	if msg.DGLabClientID != "" {
+		h.dglabHub.PreRegisterClient(msg.DGLabClientID)
+	}
+
 	// 广播房间状态（更新设备连接状态）
 	if player.Room != nil {
 		player.Room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)

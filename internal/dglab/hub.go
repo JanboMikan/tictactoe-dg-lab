@@ -115,6 +115,31 @@ func (h *Hub) UnregisterClient(client *Client) {
 	h.unregister <- client
 }
 
+// PreRegisterClient 预注册虚拟客户端（用于游戏端生成的 clientID）
+// 这个方法用于在玩家生成 DG-LAB Client ID 后，在 Hub 中预注册这个 ID
+// 这样当 APP 扫码连接并发送 bind 请求时，Hub 能够找到这个 clientID
+func (h *Hub) PreRegisterClient(clientID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	// 检查 ID 是否已存在
+	if _, exists := h.clients[clientID]; exists {
+		log.Printf("[DG-LAB Hub] PreRegisterClient: clientID %s already exists", clientID)
+		return
+	}
+
+	// 创建虚拟客户端（没有实际的 WebSocket 连接）
+	virtualClient := &Client{
+		ID:   clientID,
+		Hub:  h,
+		Send: make(chan []byte, 256),
+		Conn: nil, // 虚拟客户端没有实际连接
+	}
+
+	h.clients[clientID] = virtualClient
+	log.Printf("[DG-LAB Hub] Virtual client pre-registered: %s", clientID)
+}
+
 // HandleBind 处理绑定请求
 // 重要：根据dg-lab.md，APP发送的bind消息中
 // - clientId 字段包含从二维码获取的控制端ID
