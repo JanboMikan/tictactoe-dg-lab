@@ -283,14 +283,55 @@ func (h *Hub) triggerMoveShock(player *Player) {
 	// 获取玩家配置的强度 (0-100)，需要映射到设备强度 (0-200)
 	strength := mapStrengthToDevice(player.Config.MoveStrength)
 
-	// 发送强度设置指令
-	err := h.dglabHub.SendStrengthSet(player.GetDGLabID(), dglab.ChannelA, strength)
+	// 计算需要的波形数据量（每个波形数据是100ms）
+	duration := h.config.Game.MoveDuration
+	waveformCount := int(duration / 0.1) // 0.1秒 = 100ms
+	if waveformCount < 1 {
+		waveformCount = 1
+	}
+
+	// 生成波形数组（重复配置中的default波形）
+	waveformData := make([]string, waveformCount)
+	for i := 0; i < waveformCount; i++ {
+		waveformData[i] = h.config.Waveforms.Default
+	}
+
+	clientID := player.GetDGLabID()
+
+	// 清空A和B通道的队列
+	h.dglabHub.ClearQueue(clientID, dglab.ChannelA)
+	h.dglabHub.ClearQueue(clientID, dglab.ChannelB)
+
+	// 设置A通道强度
+	err := h.dglabHub.SendStrengthSet(clientID, dglab.ChannelA, strength)
 	if err != nil {
-		log.Printf("[Hub] Failed to send move shock to player %s: %v", player.Name, err)
+		log.Printf("[Hub] Failed to set strength for A channel for player %s: %v", player.Name, err)
 		return
 	}
 
-	log.Printf("[Hub] Sent move shock to player %s: strength=%d (device=%d)", player.Name, player.Config.MoveStrength, strength)
+	// 设置B通道强度
+	err = h.dglabHub.SendStrengthSet(clientID, dglab.ChannelB, strength)
+	if err != nil {
+		log.Printf("[Hub] Failed to set strength for B channel for player %s: %v", player.Name, err)
+		return
+	}
+
+	// 发送波形到A通道
+	err = h.dglabHub.SendPulse(clientID, "A", waveformData)
+	if err != nil {
+		log.Printf("[Hub] Failed to send move shock pulse to A channel for player %s: %v", player.Name, err)
+		return
+	}
+
+	// 发送波形到B通道
+	err = h.dglabHub.SendPulse(clientID, "B", waveformData)
+	if err != nil {
+		log.Printf("[Hub] Failed to send move shock pulse to B channel for player %s: %v", player.Name, err)
+		return
+	}
+
+	log.Printf("[Hub] Sent move shock to player %s: strength=%d (device=%d), duration=%.1fs, channels=A+B",
+		player.Name, player.Config.MoveStrength, strength, duration)
 
 	// 广播震动事件通知
 	if player.Room != nil {
@@ -323,6 +364,19 @@ func (h *Hub) triggerGameOverShock(room *Room) {
 func (h *Hub) triggerDrawShock(room *Room) {
 	players := []*Player{room.PlayerX, room.PlayerO}
 
+	// 计算需要的波形数据量
+	duration := h.config.Game.DrawDuration
+	waveformCount := int(duration / 0.1)
+	if waveformCount < 1 {
+		waveformCount = 1
+	}
+
+	// 生成波形数组
+	waveformData := make([]string, waveformCount)
+	for i := 0; i < waveformCount; i++ {
+		waveformData[i] = h.config.Waveforms.Default
+	}
+
 	for _, player := range players {
 		if player == nil || player.GetDGLabID() == "" {
 			continue
@@ -330,15 +384,42 @@ func (h *Hub) triggerDrawShock(room *Room) {
 
 		// 获取玩家配置的平局强度
 		strength := mapStrengthToDevice(player.Config.DrawStrength)
+		clientID := player.GetDGLabID()
 
-		// 发送强度设置指令
-		err := h.dglabHub.SendStrengthSet(player.GetDGLabID(), dglab.ChannelA, strength)
+		// 清空A和B通道的队列
+		h.dglabHub.ClearQueue(clientID, dglab.ChannelA)
+		h.dglabHub.ClearQueue(clientID, dglab.ChannelB)
+
+		// 设置A通道强度
+		err := h.dglabHub.SendStrengthSet(clientID, dglab.ChannelA, strength)
 		if err != nil {
-			log.Printf("[Hub] Failed to send draw shock to player %s: %v", player.Name, err)
+			log.Printf("[Hub] Failed to set strength for A channel for player %s: %v", player.Name, err)
 			continue
 		}
 
-		log.Printf("[Hub] Sent draw shock to player %s: strength=%d (device=%d)", player.Name, player.Config.DrawStrength, strength)
+		// 设置B通道强度
+		err = h.dglabHub.SendStrengthSet(clientID, dglab.ChannelB, strength)
+		if err != nil {
+			log.Printf("[Hub] Failed to set strength for B channel for player %s: %v", player.Name, err)
+			continue
+		}
+
+		// 发送波形到A通道
+		err = h.dglabHub.SendPulse(clientID, "A", waveformData)
+		if err != nil {
+			log.Printf("[Hub] Failed to send draw shock pulse to A channel for player %s: %v", player.Name, err)
+			continue
+		}
+
+		// 发送波形到B通道
+		err = h.dglabHub.SendPulse(clientID, "B", waveformData)
+		if err != nil {
+			log.Printf("[Hub] Failed to send draw shock pulse to B channel for player %s: %v", player.Name, err)
+			continue
+		}
+
+		log.Printf("[Hub] Sent draw shock to player %s: strength=%d (device=%d), duration=%.1fs, channels=A+B",
+			player.Name, player.Config.DrawStrength, strength, duration)
 
 		// 广播震动事件通知
 		room.Broadcast(&Message{
@@ -365,14 +446,56 @@ func (h *Hub) triggerPunishmentShock(loser *Player, percent int, duration float6
 	// 映射到设备强度 (0-200)
 	deviceStrength := mapStrengthToDevice(actualStrength)
 
-	// 发送强度设置指令
-	err := h.dglabHub.SendStrengthSet(loser.GetDGLabID(), dglab.ChannelA, deviceStrength)
+	// 计算需要的波形数据量（根据duration参数）
+	waveformCount := int(duration / 0.1)
+	if waveformCount < 1 {
+		waveformCount = 1
+	}
+	if waveformCount > 100 {
+		waveformCount = 100 // DG-LAB限制：最大100个波形数据
+	}
+
+	// 生成波形数组（使用pulse波形，更强烈）
+	waveformData := make([]string, waveformCount)
+	for i := 0; i < waveformCount; i++ {
+		waveformData[i] = h.config.Waveforms.Pulse
+	}
+
+	clientID := loser.GetDGLabID()
+
+	// 清空A和B通道的队列
+	h.dglabHub.ClearQueue(clientID, dglab.ChannelA)
+	h.dglabHub.ClearQueue(clientID, dglab.ChannelB)
+
+	// 设置A通道强度
+	err := h.dglabHub.SendStrengthSet(clientID, dglab.ChannelA, deviceStrength)
 	if err != nil {
-		log.Printf("[Hub] Failed to send punishment shock to player %s: %v", loser.Name, err)
+		log.Printf("[Hub] Failed to set strength for A channel for player %s: %v", loser.Name, err)
 		return
 	}
 
-	log.Printf("[Hub] Sent punishment shock to player %s: percent=%d%%, duration=%.1fs, strength=%d (device=%d)",
+	// 设置B通道强度
+	err = h.dglabHub.SendStrengthSet(clientID, dglab.ChannelB, deviceStrength)
+	if err != nil {
+		log.Printf("[Hub] Failed to set strength for B channel for player %s: %v", loser.Name, err)
+		return
+	}
+
+	// 发送波形到A通道
+	err = h.dglabHub.SendPulse(clientID, "A", waveformData)
+	if err != nil {
+		log.Printf("[Hub] Failed to send punishment shock pulse to A channel for player %s: %v", loser.Name, err)
+		return
+	}
+
+	// 发送波形到B通道
+	err = h.dglabHub.SendPulse(clientID, "B", waveformData)
+	if err != nil {
+		log.Printf("[Hub] Failed to send punishment shock pulse to B channel for player %s: %v", loser.Name, err)
+		return
+	}
+
+	log.Printf("[Hub] Sent punishment shock to player %s: percent=%d%%, duration=%.1fs, strength=%d (device=%d), channels=A+B",
 		loser.Name, percent, duration, actualStrength, deviceStrength)
 
 	// 广播震动事件通知
@@ -384,9 +507,6 @@ func (h *Hub) triggerPunishmentShock(loser *Player, percent int, duration float6
 			Reason:    "punish",
 		})
 	}
-
-	// TODO: 根据 duration 参数控制震动持续时间
-	// 当前只发送强度，如果需要波形控制，可以使用 SendPulse 方法
 }
 
 // mapStrengthToDevice 将用户强度 (0-100) 映射到设备强度 (0-200)

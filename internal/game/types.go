@@ -12,49 +12,49 @@ type MessageType string
 
 const (
 	// Client -> Server
-	TypeJoinRoom       MessageType = "join_room"
-	TypeUpdateDGLabID  MessageType = "update_dglab_id"
-	TypeUpdateConfig   MessageType = "update_config"
-	TypeMove           MessageType = "move"
-	TypePunish         MessageType = "punish"
+	TypeJoinRoom      MessageType = "join_room"
+	TypeUpdateDGLabID MessageType = "update_dglab_id"
+	TypeUpdateConfig  MessageType = "update_config"
+	TypeMove          MessageType = "move"
+	TypePunish        MessageType = "punish"
 
 	// Server -> Client
-	TypeRoomState      MessageType = "room_state"
-	TypeGameOver       MessageType = "game_over"
-	TypeShockEvent     MessageType = "shock_event"
-	TypeError          MessageType = "error"
+	TypeRoomState  MessageType = "room_state"
+	TypeGameOver   MessageType = "game_over"
+	TypeShockEvent MessageType = "shock_event"
+	TypeError      MessageType = "error"
 )
 
 // Message 定义游戏 WebSocket 消息格式
 type Message struct {
-	Type          MessageType     `json:"type"`
-	RoomID        string          `json:"room_id,omitempty"`
-	PlayerName    string          `json:"player_name,omitempty"`
-	DGLabClientID string          `json:"dglab_client_id,omitempty"`
-	Position      int             `json:"position,omitempty"`
-	Config        *PlayerConfig   `json:"config,omitempty"`
-	Percent       int             `json:"percent,omitempty"`
-	Duration      float64         `json:"duration,omitempty"`
-	Message       string          `json:"message,omitempty"`
-	Error         string          `json:"error,omitempty"` // 用于错误消息
+	Type          MessageType   `json:"type"`
+	RoomID        string        `json:"room_id,omitempty"`
+	PlayerName    string        `json:"player_name,omitempty"`
+	DGLabClientID string        `json:"dglab_client_id,omitempty"`
+	Position      int           `json:"position,omitempty"`
+	Config        *PlayerConfig `json:"config,omitempty"`
+	Percent       int           `json:"percent,omitempty"`
+	Duration      float64       `json:"duration,omitempty"`
+	Message       string        `json:"message,omitempty"`
+	Error         string        `json:"error,omitempty"` // 用于错误消息
 
 	// 以下字段仅用于 Server -> Client 消息
-	Board         []int           `json:"board,omitempty"`
-	Turn          string          `json:"turn,omitempty"`
-	Players       map[string]*PlayerInfo `json:"players,omitempty"`
-	Winner        string          `json:"winner,omitempty"`
-	Line          []int           `json:"line,omitempty"`
-	Target        string          `json:"target,omitempty"`
-	Intensity     int             `json:"intensity,omitempty"`
-	Reason        string          `json:"reason,omitempty"`
+	Board     []int                  `json:"board,omitempty"`
+	Turn      string                 `json:"turn,omitempty"`
+	Players   map[string]*PlayerInfo `json:"players,omitempty"`
+	Winner    string                 `json:"winner,omitempty"`
+	Line      []int                  `json:"line,omitempty"`
+	Target    string                 `json:"target,omitempty"`
+	Intensity int                    `json:"intensity,omitempty"`
+	Reason    string                 `json:"reason,omitempty"`
 }
 
 // PlayerConfig 玩家配置
 type PlayerConfig struct {
-	SafeMin       int `json:"safe_min"`       // 0-100
-	SafeMax       int `json:"safe_max"`       // 0-100
-	MoveStrength  int `json:"move_strength"`  // safe_min ~ safe_max
-	DrawStrength  int `json:"draw_strength"`  // safe_min ~ safe_max
+	SafeMin      int `json:"safe_min"`      // 0-100
+	SafeMax      int `json:"safe_max"`      // 0-100
+	MoveStrength int `json:"move_strength"` // safe_min ~ safe_max
+	DrawStrength int `json:"draw_strength"` // safe_min ~ safe_max
 }
 
 // PlayerInfo 用于广播的玩家信息
@@ -77,16 +77,16 @@ type Player struct {
 
 // Room 房间
 type Room struct {
-	ID           string
-	Board        [9]int  // 0: empty, 1: X, 2: O
-	Turn         int     // 1 或 2，表示当前轮到谁
-	PlayerX      *Player
-	PlayerO      *Player
-	GameOver     bool
-	Winner       int     // 0: 平局, 1: X胜, 2: O胜
-	WinningLine  []int   // 获胜的三个位置
-	CreatedAt    time.Time
-	mu           sync.RWMutex
+	ID          string
+	Board       [9]int // 0: empty, 1: X, 2: O
+	Turn        int    // 1 或 2，表示当前轮到谁
+	PlayerX     *Player
+	PlayerO     *Player
+	GameOver    bool
+	Winner      int   // 0: 平局, 1: X胜, 2: O胜
+	WinningLine []int // 获胜的三个位置
+	CreatedAt   time.Time
+	mu          sync.RWMutex
 }
 
 // GetPlayerBySymbol 根据符号获取玩家
@@ -147,9 +147,9 @@ func (r *Room) GetPlayerCount() int {
 func DefaultPlayerConfig() *PlayerConfig {
 	return &PlayerConfig{
 		SafeMin:      10,
-		SafeMax:      60,
-		MoveStrength: 15,
-		DrawStrength: 30,
+		SafeMax:      30,
+		MoveStrength: 10,
+		DrawStrength: 15,
 	}
 }
 

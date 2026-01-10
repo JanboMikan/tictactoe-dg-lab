@@ -286,6 +286,11 @@ func (h *Hub) sendHeartbeat() {
 	defer h.mu.RUnlock()
 
 	for id, client := range h.clients {
+		// 跳过虚拟客户端（没有实际WebSocket连接的客户端）
+		if client.Conn == nil {
+			continue
+		}
+
 		targetID := ""
 		if tid, ok := h.bindings[id]; ok {
 			targetID = tid
