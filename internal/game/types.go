@@ -36,6 +36,7 @@ type Message struct {
 	Percent       int             `json:"percent,omitempty"`
 	Duration      float64         `json:"duration,omitempty"`
 	Message       string          `json:"message,omitempty"`
+	Error         string          `json:"error,omitempty"` // 用于错误消息
 
 	// 以下字段仅用于 Server -> Client 消息
 	Board         []int           `json:"board,omitempty"`

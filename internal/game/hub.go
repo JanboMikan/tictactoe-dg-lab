@@ -111,16 +111,23 @@ func (h *Hub) handleJoinRoom(player *Player, msg *Message) {
 	var room *Room
 	var err error
 
-	// 如果提供了房间 ID，尝试加入现有房间
+	// 如果提供了房间 ID，尝试加入现有房间，如果不存在则创建
 	if msg.RoomID != "" {
 		room, err = h.roomManager.GetRoom(msg.RoomID)
-		if err != nil {
-			log.Printf("[Hub] Player %s failed to join room %s: %v", player.Name, msg.RoomID, err)
-			player.SendError("Room not found")
+		if err == ErrRoomNotFound {
+			// 房间不存在，创建新房间
+			room = h.roomManager.CreateRoomWithID(msg.RoomID)
+			log.Printf("[Hub] Player %s created new room %s with specified ID", player.Name, room.ID)
+		} else if err != nil {
+			// 其他错误
+			log.Printf("[Hub] Player %s failed to get room %s: %v", player.Name, msg.RoomID, err)
+			player.SendError(err.Error())
 			return
+		} else {
+			log.Printf("[Hub] Player %s joining existing room %s", player.Name, room.ID)
 		}
 	} else {
-		// 否则创建新房间
+		// 否则创建新房间（随机ID）
 		room = h.roomManager.CreateRoom()
 		log.Printf("[Hub] Player %s created new room %s", player.Name, room.ID)
 	}

@@ -110,8 +110,8 @@ func (p *Player) WritePump() {
 // SendError 向玩家发送错误消息
 func (p *Player) SendError(errorMsg string) {
 	msg := &Message{
-		Type:    TypeError,
-		Message: errorMsg,
+		Type:  TypeError,
+		Error: errorMsg,
 	}
 	data, _ := json.Marshal(msg)
 	select {

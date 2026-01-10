@@ -1,73 +1,70 @@
-# React + TypeScript + Vite
+# DG-LAB Tic-Tac-Toe Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+前端使用 React + TypeScript + Vite + MUI 构建。
 
-Currently, two official plugins are available:
+## 开发
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+# 安装依赖
+yarn install
 
-## React Compiler
+# 启动开发服务器
+yarn dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# 构建生产版本
+yarn build
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 预览生产版本
+yarn preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 环境配置
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+复制 `.env.example` 为 `.env` 并配置 WebSocket 服务器端口：
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp .env.example .env
 ```
+
+默认配置：
+- `VITE_WS_PORT=8080` - WebSocket 服务器端口
+
+## 功能特性
+
+- ✅ 首页：输入昵称、创建/加入房间
+- ✅ 游戏房间：实时井字棋对战
+- ✅ 棋盘交互：点击落子，实时更新
+- ✅ 玩家状态：显示在线状态和设备连接状态
+- ✅ 二维码生成：用于连接 DG-LAB 设备
+- ✅ WebSocket 通信：自动重连机制
+- ✅ 游戏通知：使用 toast 显示游戏事件
+
+## 项目结构
+
+```
+src/
+├── App.tsx                    # 主应用组件，React Router 配置
+├── main.tsx                   # React 入口文件
+├── components/                # UI 组件
+│   ├── Layout/               # 全局布局
+│   ├── HomePage/             # 首页
+│   ├── GameRoom/             # 游戏房间
+│   ├── Board/                # 井字棋棋盘
+│   └── QRCodeDialog/         # DG-LAB 设备连接二维码
+├── hooks/
+│   └── useGameWebSocket.ts   # WebSocket Hook
+├── types/
+│   └── game.ts               # TypeScript 类型定义
+└── utils/                    # 工具函数
+```
+
+## 技术栈
+
+- **React 19** - UI 框架
+- **TypeScript** - 类型安全
+- **Vite** - 构建工具
+- **Material UI v7** - UI 组件库
+- **React Router v7** - 路由管理
+- **react-hot-toast** - 通知系统
+- **qrcode.react** - 二维码生成
+- **uuid** - UUID 生成

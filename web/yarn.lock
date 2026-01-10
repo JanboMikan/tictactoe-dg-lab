@@ -532,6 +532,13 @@
   resolved "https://registry.npmmirror.com/@mui/core-downloads-tracker/-/core-downloads-tracker-7.3.7.tgz#99d9c60be3ce5632ec915b2c287682020ce19a99"
   integrity sha512-8jWwS6FweMkpyRkrJooamUGe1CQfO1yJ+lM43IyUJbrhHW/ObES+6ry4vfGi8EKaldHL3t3BG1bcLcERuJPcjg==
 
+"@mui/icons-material@^7.3.7":
+  version "7.3.7"
+  resolved "https://registry.npmmirror.com/@mui/icons-material/-/icons-material-7.3.7.tgz#01a6019c552e27c7f8a3451bcb47171ede8b34ac"
+  integrity sha512-3Q+ulAqG+A1+R4ebgoIs7AccaJhIGy+Xi/9OnvX376jQ6wcy+rz4geDGrxQxCGzdjOQr4Z3NgyFSZCz4T999lA==
+  dependencies:
+    "@babel/runtime" "^7.28.4"
+
 "@mui/material@^7.3.7":
   version "7.3.7"
   resolved "https://registry.npmmirror.com/@mui/material/-/material-7.3.7.tgz#50fc9b9f8645a4d26a48d7c5f7fa0c9876a8c679"
@@ -816,6 +823,13 @@
   dependencies:
     csstype "^3.2.2"
 
+"@types/uuid@^11.0.0":
+  version "11.0.0"
+  resolved "https://registry.npmmirror.com/@types/uuid/-/uuid-11.0.0.tgz#f4fa34bbf2af941148ef1973c4361fc43617971c"
+  integrity sha512-HVyk8nj2m+jcFRNazzqyVKiZezyhDKrGUA3jlEcg/nZ6Ms+qHwocba1Y/AaVaznJTAM9xpdFSh+ptbNrhOGvZA==
+  dependencies:
+    uuid "*"
+
 "@typescript-eslint/eslint-plugin@8.52.0":
   version "8.52.0"
   resolved "https://registry.npmmirror.com/@typescript-eslint/eslint-plugin/-/eslint-plugin-8.52.0.tgz#9a9f1d2ee974ed77a8b1bda94e77123f697ee8b4"
@@ -1076,7 +1090,7 @@ cross-spawn@^7.0.6:
     shebang-command "^2.0.0"
     which "^2.0.1"
 
-csstype@^3.0.2, csstype@^3.2.2, csstype@^3.2.3:
+csstype@^3.0.2, csstype@^3.1.3, csstype@^3.2.2, csstype@^3.2.3:
   version "3.2.3"
   resolved "https://registry.npmmirror.com/csstype/-/csstype-3.2.3.tgz#ec48c0f3e993e50648c86da559e2610995cf989a"
   integrity sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==
@@ -1346,6 +1360,11 @@ globals@^16.5.0:
   version "16.5.0"
   resolved "https://registry.npmmirror.com/globals/-/globals-16.5.0.tgz#ccf1594a437b97653b2be13ed4d8f5c9f850cac1"
   integrity sha512-c/c15i26VrJ4IRt5Z89DnIzCGDn9EcebibhAOjw5ibqEHsE1wLUgkPn9RDmNcUKyU87GeaL633nyJ+pplFR2ZQ==
+
+goober@^2.1.16:
+  version "2.1.18"
+  resolved "https://registry.npmmirror.com/goober/-/goober-2.1.18.tgz#b72d669bd24d552d441638eee26dfd5716ea6442"
+  integrity sha512-2vFqsaDVIT9Gz7N6kAL++pLpp41l3PfDuusHcjnGLfR6+huZkl6ziX+zgVC3ZxpqWhzH6pyDdGrCeDhMIvwaxw==
 
 has-flag@^4.0.0:
   version "4.0.0"
@@ -1658,12 +1677,25 @@ punycode@^2.1.0:
   resolved "https://registry.npmmirror.com/punycode/-/punycode-2.3.1.tgz#027422e2faec0b25e1549c3e1bd8309b9133b6e5"
   integrity sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==
 
+qrcode.react@^4.2.0:
+  version "4.2.0"
+  resolved "https://registry.npmmirror.com/qrcode.react/-/qrcode.react-4.2.0.tgz#1bce8363f348197d145c0da640929a24c83cbca3"
+  integrity sha512-QpgqWi8rD9DsS9EP3z7BT+5lY5SFhsqGjpgW5DY/i3mK4M9DTBNz3ErMi8BWYEfI3L0d8GIbGmcdFAS1uIRGjA==
+
 react-dom@^19.2.0:
   version "19.2.3"
   resolved "https://registry.npmmirror.com/react-dom/-/react-dom-19.2.3.tgz#f0b61d7e5c4a86773889fcc1853af3ed5f215b17"
   integrity sha512-yELu4WmLPw5Mr/lmeEpox5rw3RETacE++JgHqQzd2dg+YbJuat3jH4ingc+WPZhxaoFzdv9y33G+F7Nl5O0GBg==
   dependencies:
     scheduler "^0.27.0"
+
+react-hot-toast@^2.6.0:
+  version "2.6.0"
+  resolved "https://registry.npmmirror.com/react-hot-toast/-/react-hot-toast-2.6.0.tgz#4ada6ed3c75c5e42a90d562f55665ff37ee1442b"
+  integrity sha512-bH+2EBMZ4sdyou/DPrfgIouFpcRLCJ+HoCA32UoAYHn6T3Ur5yfcDCeSr5mwldl6pFOsiocmrXMuoCJ1vV8bWg==
+  dependencies:
+    csstype "^3.1.3"
+    goober "^2.1.16"
 
 react-is@^16.13.1, react-is@^16.7.0:
   version "16.13.1"
@@ -1876,6 +1908,11 @@ uri-js@^4.2.2:
   integrity sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==
   dependencies:
     punycode "^2.1.0"
+
+uuid@*, uuid@^13.0.0:
+  version "13.0.0"
+  resolved "https://registry.npmmirror.com/uuid/-/uuid-13.0.0.tgz#263dc341b19b4d755eb8fe36b78d95a6b65707e8"
+  integrity sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==
 
 vite@^7.2.4:
   version "7.3.1"

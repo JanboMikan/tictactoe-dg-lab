@@ -58,21 +58,21 @@
     - [x] 测试房间管理器功能
 
 
-## Phase 4: 前端核心功能开发 (Frontend Core)
+## Phase 4: 前端核心功能开发 (Frontend Core) ✅
 目标：完成游戏界面和交互，实现与后端的纯软件通信。
 
-- [ ] **UI 框架搭建 (MUI)**
-    - [ ] 创建 `Layout` 组件.
-    - [ ] 创建 `HomePage`: 输入昵称、创建/加入房间.
-    - [ ] 创建 `GameRoom`: 基础布局 (AppBar, PlayerInfo, Board).
-- [ ] **游戏逻辑对接**
-    - [ ] 封装 WebSocket Hook (处理连接、断线重连).
-    - [ ] 实现 `Board` 组件: 渲染 3x3 格子，点击发送 `move` 指令.
-    - [ ] 状态同步: 根据后端推送的 `room_state` 更新界面.
-- [ ] **二维码生成**
-    - [ ] 引入 `qrcode.react`.
-    - [ ] 生成 UUID (`dglab_client_id`).
-    - [ ] 渲染连接二维码: `https://...#DGLAB-SOCKET#wss://.../<uuid>`.
+- [x] **UI 框架搭建 (MUI)**
+    - [x] 创建 `Layout` 组件.
+    - [x] 创建 `HomePage`: 输入昵称、创建/加入房间.
+    - [x] 创建 `GameRoom`: 基础布局 (AppBar, PlayerInfo, Board).
+- [x] **游戏逻辑对接**
+    - [x] 封装 WebSocket Hook (处理连接、断线重连).
+    - [x] 实现 `Board` 组件: 渲染 3x3 格子，点击发送 `move` 指令.
+    - [x] 状态同步: 根据后端推送的 `room_state` 更新界面.
+- [x] **二维码生成**
+    - [x] 引入 `qrcode.react`.
+    - [x] 生成 UUID (`dglab_client_id`).
+    - [x] 渲染连接二维码: `https://...#DGLAB-SOCKET#wss://.../<uuid>`.
 
 ## Phase 5: 系统集成与硬件联动 (Integration)
 目标：将游戏事件与 DG-LAB 服务打通，实现自动震动。

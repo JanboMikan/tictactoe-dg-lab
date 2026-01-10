@@ -256,7 +256,7 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
     └── tsconfig.json          # TypeScript 配置
 ```
 
-**已实现的功能（Phase 1-3）：**
+**已实现的功能（Phase 1-4）：**
 - ✅ Go 后端基础架构：配置加载、HTTP 服务、CORS 支持
 - ✅ 配置文件系统：支持 YAML 格式配置，包含服务器、游戏、波形参数
 - ✅ 单元测试：config、server、dglab 和 game 模块均有测试覆盖
@@ -284,9 +284,41 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
   - **玩家配置**: 支持自定义安全强度范围
   - **并发安全**: 使用 sync.RWMutex 保护共享数据
   - **单元测试覆盖**: 7个测试用例，覆盖房间管理、游戏逻辑、配置验证
+- ✅ **前端游戏界面和 WebSocket 通信** (Phase 4):
+  - **UI 组件**: Layout, HomePage, GameRoom, Board, QRCodeDialog
+  - **WebSocket Hook**: useGameWebSocket，支持自动重连
+  - **路由系统**: React Router v6，支持首页和游戏房间
+  - **游戏交互**: 实时棋盘渲染、落子操作、游戏状态显示
+  - **玩家信息**: 显示在线状态、设备连接状态
+  - **二维码生成**: 符合 DG-LAB 规范的二维码，用于连接设备
+  - **通知系统**: react-hot-toast，实时显示游戏事件
+  - **TypeScript**: 完整的类型定义，保证类型安全
+  - **MUI v7**: Material Design 风格，响应式布局
+
+**前端目录结构（Phase 4 完成后）：**
+```text
+web/src/
+├── App.tsx                    # 主应用组件，React Router 配置
+├── main.tsx                   # React 入口文件
+├── components/
+│   ├── Layout/
+│   │   └── Layout.tsx         # 全局布局组件（主题、Toaster）
+│   ├── HomePage/
+│   │   └── HomePage.tsx       # 首页：输入昵称、创建/加入房间
+│   ├── GameRoom/
+│   │   └── GameRoom.tsx       # 游戏房间主组件（AppBar、玩家信息、棋盘）
+│   ├── Board/
+│   │   └── Board.tsx          # 井字棋棋盘组件（3x3 网格）
+│   └── QRCodeDialog/
+│       └── QRCodeDialog.tsx   # DG-LAB 设备连接二维码弹窗
+├── hooks/
+│   └── useGameWebSocket.ts    # WebSocket Hook（连接管理、消息处理）
+├── types/
+│   └── game.ts                # TypeScript 类型定义（消息、状态）
+└── utils/                     # 工具函数（待扩展）
+```
 
 **待实现的模块：**
-- ⏳ 前端游戏界面和 WebSocket 通信 (Phase 4)
 - ⏳ 游戏与 DG-LAB 硬件联动 (Phase 5)
 
 ### 7.2 DG-LAB 服务模块 (`internal/dglab`) ✅ 已实现

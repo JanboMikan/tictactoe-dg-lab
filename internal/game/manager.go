@@ -39,6 +39,29 @@ func (m *RoomManager) CreateRoom() *Room {
 	return room
 }
 
+// CreateRoomWithID 创建指定ID的新房间
+func (m *RoomManager) CreateRoomWithID(roomID string) *Room {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// 检查房间是否已存在
+	if _, exists := m.rooms[roomID]; exists {
+		log.Printf("[RoomManager] Room %s already exists", roomID)
+		return m.rooms[roomID]
+	}
+
+	room := &Room{
+		ID:        roomID,
+		Board:     [9]int{},
+		Turn:      1, // X 先手
+		CreatedAt: time.Now(),
+	}
+
+	m.rooms[roomID] = room
+	log.Printf("[RoomManager] Room %s created with specified ID", roomID)
+	return room
+}
+
 // GetRoom 获取房间
 func (m *RoomManager) GetRoom(roomID string) (*Room, error) {
 	m.mu.RLock()

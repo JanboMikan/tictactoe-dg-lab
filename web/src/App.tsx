@@ -1,18 +1,19 @@
-import { Container, Typography, Box } from '@mui/material'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Layout } from './components/Layout/Layout';
+import { HomePage } from './components/HomePage/HomePage';
+import { GameRoom } from './components/GameRoom/GameRoom';
 
 function App() {
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h3" component="h1" gutterBottom>
-          DG-LAB Tic-Tac-Toe
-        </Typography>
-        <Typography variant="h6" color="text.secondary">
-          郊狼井字棋游戏 - 前端已就绪
-        </Typography>
-      </Box>
-    </Container>
-  )
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/room/:roomId" element={<GameRoom />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
