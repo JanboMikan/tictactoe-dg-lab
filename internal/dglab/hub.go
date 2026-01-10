@@ -33,6 +33,10 @@ type Hub struct {
 	// 绑定成功回调函数：当设备绑定成功时调用
 	// 参数是控制端的clientID
 	OnBindSuccess func(clientID string)
+
+	// 设备断开回调函数：当设备断开连接时调用
+	// 参数是控制端的clientID
+	OnDeviceDisconnect func(clientID string)
 }
 
 // NewHub 创建一个新的Hub实例
@@ -78,7 +82,19 @@ func (h *Hub) Run() {
 
 				// 查找并通知绑定的伙伴
 				partnerID := h.findPartner(client.ID)
+				var controlClientID string // 控制端的ID，用于回调通知
+
 				if partnerID != "" {
+					// 判断断开的是控制端还是APP端
+					// 如果断开的ID在bindings中作为key存在，则它是控制端
+					if _, isControlClient := h.bindings[client.ID]; isControlClient {
+						// 控制端断开了，controlClientID就是它自己
+						controlClientID = client.ID
+					} else {
+						// APP端断开了，需要找到对应的控制端ID
+						controlClientID = partnerID
+					}
+
 					h.removeBinding(client.ID)
 
 					// 通知伙伴连接已断开
@@ -95,6 +111,17 @@ func (h *Hub) Run() {
 				}
 
 				log.Printf("[DG-LAB Hub] Client unregistered: %s", client.ID)
+
+				// 在锁外调用回调，避免死锁
+				h.mu.Unlock()
+
+				// 如果有绑定关系且设置了回调，通知设备断开
+				if controlClientID != "" && h.OnDeviceDisconnect != nil {
+					log.Printf("[DG-LAB Hub] Calling OnDeviceDisconnect for controlClientID: %s", controlClientID)
+					h.OnDeviceDisconnect(controlClientID)
+				}
+
+				continue // 跳过下面的unlock，因为已经unlock了
 			}
 			h.mu.Unlock()
 

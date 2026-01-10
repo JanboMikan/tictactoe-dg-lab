@@ -56,6 +56,13 @@ func New(cfg *config.Config) *Server {
 		gameHub.NotifyDeviceConnected(clientID)
 	}
 
+	// 设置DG-LAB设备断开连接的回调
+	// 当设备断开连接时，通知游戏Hub广播状态更新
+	dglabHub.OnDeviceDisconnect = func(clientID string) {
+		log.Printf("[Server] Device disconnect callback for clientID: %s", clientID)
+		gameHub.NotifyDeviceDisconnected(clientID)
+	}
+
 	server := &Server{
 		router:   router,
 		config:   cfg,

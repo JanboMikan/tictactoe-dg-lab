@@ -416,3 +416,20 @@ func (h *Hub) NotifyDeviceConnected(clientID string) {
 	// 广播房间状态更新
 	room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)
 }
+
+// NotifyDeviceDisconnected 通知设备已断开
+// 当DG-LAB设备断开连接时调用，触发房间状态广播
+func (h *Hub) NotifyDeviceDisconnected(clientID string) {
+	log.Printf("[Hub] Device disconnected notification for clientID: %s", clientID)
+
+	// 查找使用这个clientID的房间
+	room := h.roomManager.FindRoomByDGLabID(clientID)
+	if room == nil {
+		log.Printf("[Hub] No room found for clientID: %s", clientID)
+		return
+	}
+
+	log.Printf("[Hub] Found room %s for device %s, broadcasting state update after disconnect", room.ID, clientID)
+	// 广播房间状态更新
+	room.BroadcastRoomState(h.dglabHub.IsDeviceConnected)
+}

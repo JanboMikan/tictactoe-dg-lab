@@ -112,6 +112,15 @@ export const GameRoom = () => {
       });
     }
 
+    // Detect device disconnection: from true -> false
+    if (previousDeviceActive.current && !isDeviceActive) {
+      // Device just disconnected, show warning toast
+      toast.error('DG-LAB device disconnected! 📴', {
+        duration: 4000,
+        icon: '⚠️',
+      });
+    }
+
     // Update previous state
     previousDeviceActive.current = isDeviceActive;
   }, [roomState, localRoomState, nickname, qrDialogOpen]);

@@ -90,6 +90,12 @@
     - [x] 后端: 通过 `room.BroadcastRoomState` 传递设备状态检查函数.
     - [x] 前端: 在玩家头像旁显示连接状态图标 (绿/灰) - 已实现（Phase 4）.
     - [x] 前端: 接收 `shock_event` 时弹出 Toast 提示 - 已实现（Phase 4）.
+- [x] **设备断开连接处理**（补充完善）
+    - [x] 后端: 在 `dglab.Hub` 添加 `OnDeviceDisconnect` 回调字段
+    - [x] 后端: 在设备断开时调用回调通知游戏 Hub 更新状态
+    - [x] 后端: 在 `game.Hub` 添加 `NotifyDeviceDisconnected` 方法
+    - [x] 后端: 在 `server.go` 设置 `OnDeviceDisconnect` 回调
+    - [x] 前端: 监听设备状态变化，显示断开连接的 Toast 提示
 
 ## Phase 6: 高级功能与配置 (Refinement)
 目标：实现用户自定义设置和赢家惩罚机制。
