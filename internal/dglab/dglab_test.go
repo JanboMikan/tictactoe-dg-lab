@@ -322,3 +322,70 @@ func TestMessageValidation(t *testing.T) {
 	err = hub.SendPulse(controlID, "A", []string{})
 	assert.Error(t, err)
 }
+
+// TestSendPulseBatching 测试大量波形数据的分批发送
+func TestSendPulseBatching(t *testing.T) {
+	hub := NewHub()
+	go hub.Run()
+
+	// 创建并注册客户端
+	controlClient := &Client{Send: make(chan []byte, 256)}
+	appClient := &Client{Send: make(chan []byte, 256)}
+
+	controlID := hub.RegisterClient(controlClient)
+	appID := hub.RegisterClient(appClient)
+	time.Sleep(100 * time.Millisecond)
+
+	// 清空初始消息
+	<-controlClient.Send
+	<-appClient.Send
+
+	// 建立绑定
+	hub.mu.Lock()
+	hub.bindings[controlID] = appID
+	hub.mu.Unlock()
+
+	// 测试发送100个波形数据（会触发分批）
+	hexData := make([]string, 100)
+	for i := 0; i < 100; i++ {
+		hexData[i] = "1E1E1E1E3C3C3C3C" // 16字符的波形数据（正确格式：8字节）
+	}
+
+	err := hub.SendPulse(controlID, "A", hexData)
+	assert.NoError(t, err)
+
+	// 验证收到了多个批次的消息
+	// 批次大小是30，所以100个数据应该分成4批：30+30+30+10
+	batchCount := 0
+	totalDataReceived := 0
+
+	// 等待所有批次（最多5秒）
+	timeout := time.After(5 * time.Second)
+	for batchCount < 4 {
+		select {
+		case msg := <-appClient.Send:
+			var message Message
+			err := json.Unmarshal(msg, &message)
+			assert.NoError(t, err)
+			assert.Contains(t, message.Message, "pulse-A:")
+
+			// 计算这批数据的数量（简单统计逗号数量+1）
+			dataCount := 1
+			for _, ch := range message.Message {
+				if ch == ',' {
+					dataCount++
+				}
+			}
+			totalDataReceived += dataCount
+			batchCount++
+
+			t.Logf("Received batch %d with %d waveforms", batchCount, dataCount)
+
+		case <-timeout:
+			t.Fatalf("Timeout waiting for batches, received %d batches", batchCount)
+		}
+	}
+
+	assert.Equal(t, 4, batchCount, "Should receive 4 batches")
+	assert.Equal(t, 100, totalDataReceived, "Should receive 100 total waveforms")
+}

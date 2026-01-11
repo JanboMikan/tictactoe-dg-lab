@@ -305,6 +305,9 @@ func (h *Hub) triggerMoveShock(player *Player) {
 	h.dglabHub.ClearQueue(clientID, dglab.ChannelA)
 	h.dglabHub.ClearQueue(clientID, dglab.ChannelB)
 
+	// 延迟150ms，确保清空指令先被处理，避免网络乱序
+	time.Sleep(150 * time.Millisecond)
+
 	// 设置A通道强度
 	err := h.dglabHub.SendStrengthSet(clientID, dglab.ChannelA, strength)
 	if err != nil {
@@ -393,6 +396,9 @@ func (h *Hub) triggerDrawShock(room *Room) {
 		h.dglabHub.ClearQueue(clientID, dglab.ChannelA)
 		h.dglabHub.ClearQueue(clientID, dglab.ChannelB)
 
+		// 延迟150ms，确保清空指令先被处理，避免网络乱序
+		time.Sleep(150 * time.Millisecond)
+
 		// 设置A通道强度
 		err := h.dglabHub.SendStrengthSet(clientID, dglab.ChannelA, strength)
 		if err != nil {
@@ -469,6 +475,9 @@ func (h *Hub) triggerPunishmentShock(loser *Player, percent int, duration float6
 	// 清空A和B通道的队列
 	h.dglabHub.ClearQueue(clientID, dglab.ChannelA)
 	h.dglabHub.ClearQueue(clientID, dglab.ChannelB)
+
+	// 延迟150ms，确保清空指令先被处理，避免网络乱序
+	time.Sleep(150 * time.Millisecond)
 
 	// 设置A通道强度
 	err := h.dglabHub.SendStrengthSet(clientID, dglab.ChannelA, deviceStrength)

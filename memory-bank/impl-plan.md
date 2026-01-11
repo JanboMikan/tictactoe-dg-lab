@@ -97,21 +97,21 @@
     - [x] 后端: 在 `server.go` 设置 `OnDeviceDisconnect` 回调
     - [x] 前端: 监听设备状态变化，显示断开连接的 Toast 提示
 
-## Phase 6: 高级功能与配置 (Refinement)
+## Phase 6: 高级功能与配置 (Refinement) ✅
 目标：实现用户自定义设置和赢家惩罚机制。
 
-- [ ] **用户配置 (Settings)**
-    - [ ] 前端: 创建 `SettingsDialog`.
-        - [ ] 双滑块: `Safe Min` - `Safe Max`.
-        - [ ] 单滑块: `Move Strength`, `Draw Strength`.
-    - [ ] 后端: 处理 `update_config` 消息，保存到 Player Session.
-    - [ ] **核心逻辑**: 修改震动发送函数，将逻辑强度映射到用户的 `Safe Range`.
-- [ ] **惩罚机制 (Punishment)**
-    - [ ] 后端: 实现 `punish` 接口 (校验发起者是否为 Winner).
-    - [ ] 后端: 计算惩罚强度 (基于 Loser 的 Safe Range 和 Winner 的百分比).
-    - [ ] 前端: 仅在胜利且游戏结束状态下显示 `PunishPanel`.
-        - [ ] 强度滑块 (1-100%).
-        - [ ] 时间滑块 (读取 Config 中的 Min/Max).
+- [x] **用户配置 (Settings)**
+    - [x] 前端: 创建 `SettingsDialog`.
+        - [x] 双滑块: `Safe Min` - `Safe Max`.
+        - [x] 单滑块: `Move Strength`, `Draw Strength`.
+    - [x] 后端: 处理 `update_config` 消息，保存到 Player Session (Phase 3 已实现).
+    - [x] **核心逻辑**: 修改震动发送函数，将逻辑强度映射到用户的 `Safe Range` (Phase 5 已实现).
+- [x] **惩罚机制 (Punishment)**
+    - [x] 后端: 实现 `punish` 接口 (校验发起者是否为 Winner) (Phase 5 已实现).
+    - [x] 后端: 计算惩罚强度 (基于 Loser 的 Safe Range 和 Winner 的百分比) (Phase 5 已实现).
+    - [x] 前端: 仅在胜利且游戏结束状态下显示 `PunishPanel`.
+        - [x] 强度滑块 (1-100%).
+        - [x] 时间滑块 (读取 Config 中的 Min/Max).
 
 ## Phase 7: 测试与部署 (Testing & Deployment)
 目标：确保系统稳定，边界条件处理得当。

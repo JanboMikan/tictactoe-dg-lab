@@ -18,7 +18,9 @@ import toast from 'react-hot-toast';
 import { useGameWebSocket } from '../../hooks/useGameWebSocket';
 import { Board } from '../Board/Board';
 import { QRCodeDialog } from '../QRCodeDialog/QRCodeDialog';
-import type { GameOverMessage, RoomState } from '../../types/game';
+import { SettingsDialog } from '../SettingsDialog/SettingsDialog';
+import { PunishPanel } from '../PunishPanel/PunishPanel';
+import type { GameOverMessage, RoomState, PlayerConfig } from '../../types/game';
 
 export const GameRoom = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -27,9 +29,16 @@ export const GameRoom = () => {
   const nickname = location.state?.nickname;
 
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [dglabClientId] = useState(() => uuidv4());
   const [gameOverData, setGameOverData] = useState<GameOverMessage | null>(null);
   const [localRoomState, setLocalRoomState] = useState<RoomState | null>(null);
+  const [playerConfig, setPlayerConfig] = useState<PlayerConfig>({
+    safe_min: 10,
+    safe_max: 30,
+    move_strength: 10,
+    draw_strength: 15,
+  });
 
   // Track if we've already joined the room
   const hasJoinedRoom = useRef(false);
@@ -51,16 +60,17 @@ export const GameRoom = () => {
     return `${protocol}//${host}:${port}/ws/dglab`;
   }, []);
 
-  const { isConnected, roomState, joinRoom, updateDGLabID, makeMove } = useGameWebSocket({
-    url: wsUrl,
-    onRoomState: (state) => {
-      console.log('Room state updated:', state);
-      setLocalRoomState(state);
-    },
-    onGameOver: (data) => {
-      setGameOverData(data);
-    },
-  });
+  const { isConnected, roomState, joinRoom, updateDGLabID, updateConfig, makeMove, sendPunishment } =
+    useGameWebSocket({
+      url: wsUrl,
+      onRoomState: (state) => {
+        console.log('Room state updated:', state);
+        setLocalRoomState(state);
+      },
+      onGameOver: (data) => {
+        setGameOverData(data);
+      },
+    });
 
   // Redirect if no nickname
   useEffect(() => {
@@ -135,6 +145,20 @@ export const GameRoom = () => {
     setQrDialogOpen(true);
   };
 
+  const handleOpenSettings = () => {
+    setSettingsDialogOpen(true);
+  };
+
+  const handleSaveSettings = (config: PlayerConfig) => {
+    setPlayerConfig(config);
+    updateConfig(config);
+    toast.success('Settings saved successfully!');
+  };
+
+  const handlePunish = (percent: number, duration: number) => {
+    sendPunishment(percent, duration);
+  };
+
   const displayRoomState = roomState || localRoomState;
   const board = displayRoomState?.board || Array(9).fill(null);
   const currentTurn = displayRoomState?.turn;
@@ -142,6 +166,8 @@ export const GameRoom = () => {
 
   const isMyTurn = currentTurn === nickname;
   const playerNames = Object.keys(players);
+  const isWinner = gameOverData?.winner === nickname;
+  const canPunish = isWinner && gameOverData !== null;
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -150,7 +176,7 @@ export const GameRoom = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Room: {roomId}
           </Typography>
-          <IconButton color="inherit" edge="end">
+          <IconButton color="inherit" edge="end" onClick={handleOpenSettings}>
             <SettingsIcon />
           </IconButton>
         </Toolbar>
@@ -235,6 +261,18 @@ export const GameRoom = () => {
           winningLine={gameOverData?.line}
         />
 
+        {/* Punishment Panel - Only show if winner and game is over */}
+        {canPunish && (
+          <Box sx={{ mt: 3, mb: 3 }}>
+            <PunishPanel
+              minDuration={1.0}
+              maxDuration={10.0}
+              onPunish={handlePunish}
+              disabled={false}
+            />
+          </Box>
+        )}
+
         {/* Action Area */}
         <Box sx={{ textAlign: 'center', mt: 3 }}>
           <Button variant="contained" onClick={handleConnectDevice} sx={{ mr: 2 }}>
@@ -254,6 +292,14 @@ export const GameRoom = () => {
         onClose={() => setQrDialogOpen(false)}
         dglabClientId={dglabClientId}
         serverUrl={dglabServerUrl}
+      />
+
+      {/* Settings Dialog */}
+      <SettingsDialog
+        open={settingsDialogOpen}
+        onClose={() => setSettingsDialogOpen(false)}
+        onSave={handleSaveSettings}
+        currentConfig={playerConfig}
       />
     </Box>
   );

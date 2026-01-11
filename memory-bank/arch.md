@@ -70,9 +70,11 @@ game:
 
 waveforms:
   # 波形数据 (HEX String, 每8字节100ms)
-  # 可以在此处定义多种波形，代码中通过 key 调用
-  default: "0A0A0A0A0A0A0A0A" 
-  pulse: "00000000FFFFFFFF00000000"
+  # ⚠️ 重要：每个波形必须是精确的16个十六进制字符（8字节）
+  # 数值范围：00-FF，数值越大脉冲强度越强（相对于设置的强度值）
+  # 建议使用渐进式波形，避免使用极端值（如00或FF）
+  default: "0A0A0A0A0A0A0A0A"      # 轻微震动：平缓的脉冲
+  pulse: "1E1E1E1E3C3C3C3C"        # 强力脉冲：渐进式波形
 ```
 
 ### 4.2 强度与安全限制逻辑
@@ -295,7 +297,7 @@ actual_strength = loser.safe_min + (range * intensity_percent / 100)
   - **TypeScript**: 完整的类型定义，保证类型安全
   - **MUI v7**: Material Design 风格，响应式布局
 
-**前端目录结构（Phase 4 完成后）：**
+**前端目录结构（Phase 6 完成后）：**
 ```text
 web/src/
 ├── App.tsx                    # 主应用组件，React Router 配置
@@ -309,8 +311,12 @@ web/src/
 │   │   └── GameRoom.tsx       # 游戏房间主组件（AppBar、玩家信息、棋盘）
 │   ├── Board/
 │   │   └── Board.tsx          # 井字棋棋盘组件（3x3 网格）
-│   └── QRCodeDialog/
-│       └── QRCodeDialog.tsx   # DG-LAB 设备连接二维码弹窗
+│   ├── QRCodeDialog/
+│   │   └── QRCodeDialog.tsx   # DG-LAB 设备连接二维码弹窗
+│   ├── SettingsDialog/
+│   │   └── SettingsDialog.tsx # 玩家设置弹窗（Safe Range、震动强度）
+│   └── PunishPanel/
+│       └── PunishPanel.tsx    # 惩罚控制面板（赢家专用）
 ├── hooks/
 │   └── useGameWebSocket.ts    # WebSocket Hook（连接管理、消息处理）
 ├── types/
@@ -320,8 +326,25 @@ web/src/
 
 **待实现的模块：**
 - ✅ 游戏与 DG-LAB 硬件联动 (Phase 5) **已完成**
-- ⏳ 高级功能与配置 (Phase 6)
+- ✅ 高级功能与配置 (Phase 6) **已完成**
 - ⏳ 测试与部署 (Phase 7)
+
+**Phase 6 完成内容（高级功能与配置）：**
+- ✅ **SettingsDialog 组件**：用户可自定义安全强度范围和震动强度
+  - 双滑块：Safe Range (Min - Max)，限制所有震动强度在用户可接受范围内
+  - 单滑块：Move Strength (落子震动强度)
+  - 单滑块：Draw Strength (平局震动强度)
+  - 实时验证：确保 MoveStrength 和 DrawStrength 在 Safe Range 内
+  - 自动调整：修改 Safe Range 时自动调整其他强度值
+- ✅ **PunishPanel 组件**：赢家专属的惩罚控制面板
+  - 仅在游戏结束且当前玩家是赢家时显示
+  - 强度百分比滑块：1% - 100%，基于输家的 Safe Range 计算实际强度
+  - 时长滑块：1s - 10s（从配置文件读取）
+  - 视觉设计：使用警告色系（红色主题）突出惩罚操作
+  - 实时反馈：发送惩罚后显示 Toast 通知
+- ✅ 后端配置验证和强度映射（Phase 5 已实现）
+- ✅ WebSocket 消息处理：updateConfig 和 sendPunishment
+- ✅ 前端集成：GameRoom 组件集成 SettingsDialog 和 PunishPanel
 
 **Phase 5 完成内容（硬件联动）：**
 - ✅ Game Hub 注入 DGLab Hub 和 Config 依赖
@@ -591,6 +614,89 @@ func mapStrengthToDevice(userStrength int) int {
     *   前端生成二维码。
     *   后端在游戏事件发生时查找 ID 并触发震动。
 5.  **UI Polish**: 应用 Material Design，添加 Toast 提示，完善设置面板和惩罚面板。
-6.  **Testing**: 
+6.  **Testing**:
     *   测试单人连接、双人连接、一方未连接的情况（需确保程序不崩溃）。
     *   测试安全范围限制是否生效。
+
+---
+
+## 9. 常见问题和解决方案
+
+### 9.1 波形数据格式问题
+
+**问题描述**：设备接收到强度设置但没有震动效果，日志显示 pulse 命令已发送但设备无响应。
+
+**原因分析**：
+- DG-LAB 协议要求每个波形数据必须是 **精确的 8 字节 HEX 码**（16 个十六进制字符）
+- 如果配置文件中的波形数据长度不正确（如 24 字符），设备会丢弃波形数据
+- 设备只保留强度设置，导致有强度反馈但无震动效果
+
+**解决方案**：
+1. 检查 `config.yml` 中的波形数据格式
+2. 确保每个波形字符串长度为 16 个十六进制字符
+3. 正确示例：
+   - ✓ `"0A0A0A0A0A0A0A0A"` (16 字符 = 8 字节)
+   - ✓ `"1E1E1E1E3C3C3C3C"` (16 字符 = 8 字节)
+   - ✗ `"00000000FFFFFFFF00000000"` (24 字符 = 12 字节，错误！)
+
+**修复日期**：2026-01-10
+**相关日志特征**：
+```
+[DG-LAB Hub] Command sent to xxx: strength-1+2+24  ✓ 成功
+[DG-LAB Hub] Command sent to xxx: pulse-A:[...]    ✓ 发送
+[DG-LAB Client] Received: strength-24+24+30+30     ✓ 设备反馈强度
+但设备没有实际震动                                  ✗ 波形被丢弃
+```
+
+### 9.2 波形数据设计问题
+
+**问题描述**：波形数据格式正确（16字符），但设备仍然没有震动效果。
+
+**原因分析**：
+- 波形数据的HEX值设计不当，如 `"00000000FFFFFFFF"` 使用极端值（全0和全FF）
+- 这种极端的波形可能导致设备无法正常解析或执行
+- 设备可能将其视为无效波形而丢弃
+
+**解决方案**：
+1. 使用渐进式波形，避免极端值：
+   - ✓ `"0A0A0A0A0A0A0A0A"` - 平缓的轻微脉冲
+   - ✓ `"1E1E1E1E3C3C3C3C"` - 渐进式强力脉冲
+   - ✗ `"00000000FFFFFFFF"` - 避免使用极端值
+2. 波形值建议范围：`0A`-`3C`（10-60 十进制）
+3. 可以参考官方文档示例波形
+
+**修复日期**：2026-01-10
+
+### 9.3 网络消息乱序问题
+
+**问题描述**：即使波形格式和数据都正确，设备仍然没有执行波形，或执行不稳定。
+
+**原因分析**：
+- 在清空队列（`clear`）后立即发送波形（`pulse`），可能导致网络消息乱序
+- 设备可能在处理波形数据时还没有完成清空队列操作
+- 导致新发送的波形被立即清空
+
+**解决方案**：
+1. 在 `ClearQueue` 和 `SendPulse` 之间添加 **150ms 延迟**
+2. 参考官方文档示例代码中的延迟处理
+3. 修改代码：
+```go
+// 清空队列
+h.dglabHub.ClearQueue(clientID, dglab.ChannelA)
+h.dglabHub.ClearQueue(clientID, dglab.ChannelB)
+
+// 延迟150ms，确保清空指令先被处理
+time.Sleep(150 * time.Millisecond)
+
+// 发送强度和波形
+h.dglabHub.SendStrengthSet(clientID, dglab.ChannelA, strength)
+h.dglabHub.SendPulse(clientID, "A", waveformData)
+```
+
+**修复日期**：2026-01-10
+**相关代码位置**：
+- `internal/game/hub.go:triggerMoveShock()`
+- `internal/game/hub.go:triggerDrawShock()`
+- `internal/game/hub.go:triggerPunishmentShock()`
+
+---

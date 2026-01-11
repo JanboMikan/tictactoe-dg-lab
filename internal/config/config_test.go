@@ -19,7 +19,7 @@ game:
 
 waveforms:
   default: "0A0A0A0A0A0A0A0A"
-  pulse: "00000000FFFFFFFF00000000"
+  pulse: "1E1E1E1E3C3C3C3C"
 `
 	tmpFile, err := os.CreateTemp("", "config-*.yml")
 	if err != nil {

@@ -3,6 +3,7 @@ package dglab
 import (
 	"fmt"
 	"log"
+	"time"
 )
 
 // Channel 定义通道类型
@@ -49,6 +50,7 @@ func (h *Hub) SendStrength(clientID string, channel Channel, mode StrengthMode, 
 // channel: 通道 ("A" 或 "B")
 // hexData: HEX数组，每个元素为8字节HEX码，代表100ms数据
 // 注意：数组最大长度100 (10秒)，APP队列最大缓存500 (50秒)
+// 如果数据量超过单次消息限制（1950字节），会自动分批发送
 func (h *Hub) SendPulse(clientID string, channel string, hexData []string) error {
 	// 验证通道
 	if channel != "A" && channel != "B" {
@@ -63,6 +65,48 @@ func (h *Hub) SendPulse(clientID string, channel string, hexData []string) error
 		return fmt.Errorf("hexData too long: %d (max 100)", len(hexData))
 	}
 
+	// 计算单批最多能发送多少个波形
+	// 每个波形约27字节（含引号和逗号），JSON固定部分约200字节
+	// 为保险起见，限制为30个波形/批（约1000字节，远小于1950字节限制）
+	const batchSize = 30
+
+	// 如果数据量小于批次大小，直接发送
+	if len(hexData) <= batchSize {
+		return h.sendPulseBatch(clientID, channel, hexData)
+	}
+
+	// 分批发送
+	log.Printf("[DG-LAB Commands] Sending pulse in batches: channel=%s, totalData=%d, batchSize=%d",
+		channel, len(hexData), batchSize)
+
+	for i := 0; i < len(hexData); i += batchSize {
+		end := i + batchSize
+		if end > len(hexData) {
+			end = len(hexData)
+		}
+
+		batch := hexData[i:end]
+		err := h.sendPulseBatch(clientID, channel, batch)
+		if err != nil {
+			log.Printf("[DG-LAB Commands] Failed to send batch %d-%d: %v", i, end, err)
+			return fmt.Errorf("failed to send batch %d-%d: %w", i, end, err)
+		}
+
+		log.Printf("[DG-LAB Commands] Sent batch %d-%d successfully", i, end)
+
+		// 批次之间添加短暂延迟（100ms），避免消息拥堵
+		if end < len(hexData) {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	log.Printf("[DG-LAB Commands] All pulse batches sent successfully: channel=%s, totalData=%d",
+		channel, len(hexData))
+	return nil
+}
+
+// sendPulseBatch 发送单批波形数据（内部使用）
+func (h *Hub) sendPulseBatch(clientID string, channel string, hexData []string) error {
 	// 构造JSON数组字符串
 	hexArrayStr := "["
 	for i, hex := range hexData {
@@ -75,7 +119,7 @@ func (h *Hub) SendPulse(clientID string, channel string, hexData []string) error
 
 	// 构造指令: pulse-{通道}:{HEX数组}
 	message := fmt.Sprintf("pulse-%s:%s", channel, hexArrayStr)
-	log.Printf("[DG-LAB Commands] Sending pulse command: channel=%s, dataLen=%d", channel, len(hexData))
+	log.Printf("[DG-LAB Commands] Sending pulse batch: channel=%s, dataLen=%d", channel, len(hexData))
 
 	return h.SendCommand(clientID, message)
 }
